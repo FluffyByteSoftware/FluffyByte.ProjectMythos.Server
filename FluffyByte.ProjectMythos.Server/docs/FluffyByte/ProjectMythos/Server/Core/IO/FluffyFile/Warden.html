@@ -1,0 +1,71 @@
+<!DOCTYPE html><html><head>
+<meta charset='utf-8'>
+<title>Warden</title>
+<style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; line-height: 1.6; max-width: 1200px; }
+            .header { margin-bottom: 20px; }
+            .header a { text-decoration: none; color: #0066cc; }
+            h1 { color: #333; border-bottom: 2px solid #0066cc; padding-bottom: 10px; }
+            h2 { color: #555; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+            .namespace { color: #666; font-size: 0.9em; margin-bottom: 20px; }
+            .type-summary { background: #f0f8ff; padding: 15px; border-left: 4px solid #0066cc; margin: 20px 0; }
+            .relationships { background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0; }
+            .relationships div { margin: 5px 0; }
+            .member { margin: 15px 0; padding: 15px; background: #fafafa; border-radius: 5px; }
+            .signature { font-family: 'Courier New', monospace; color: #333; margin-bottom: 8px; }
+            .signature strong { color: #0066cc; }
+            .summary { color: #555; font-size: 0.95em; margin-top: 8px; }
+            .type-kind { display: inline-block; background: #e0e0e0; padding: 2px 8px; border-radius: 3px; font-size: 0.85em; margin-right: 5px; }
+            a { color: #0066cc; text-decoration: none; }
+            a:hover { text-decoration: underline; }
+            ul { list-style-type: none; padding-left: 0; }
+            li { margin: 10px 0; padding: 10px; background: #fafafa; border-radius: 3px; }
+            </style>
+</head><body>
+<div class='header'><a href='../../../../../../index.html'>← Back to Index</a></div>
+<h1>static class Warden</h1>
+<div class='namespace'>Namespace: FluffyByte.ProjectMythos.Server.Core.IO.FluffyFile</div>
+<div class='type-summary'>Provides utility methods for reading, writing, and managing text and binary files asynchronously.</div>
+<h2>Relationships</h2>
+<div class='relationships'>
+</div>
+<h2>Properties</h2>
+<div class='member'>
+<div class='signature'>Boolean <strong>IsInitialized</strong> { get; set; }</div>
+<div class='summary'>Gets a value indicating whether the system has been initialized.</div>
+</div>
+<h2>Methods</h2>
+<div class='member'>
+<div class='signature'>Void <strong>Deinitialize</strong>()</div>
+<div class='summary'>Resets the initialization state of the application or system.</div>
+</div>
+<div class='member'>
+<div class='signature'>Void <strong>Initialize</strong>()</div>
+<div class='summary'>Initializes the application or system by setting the internal state to indicate readiness.</div>
+</div>
+<div class='member'>
+<div class='signature'>Task`1 <strong>ReadAllTextFileAsLinesAsync</strong>(String path)</div>
+<div class='summary'>Asynchronously reads all lines from the specified text file.</div>
+</div>
+<div class='member'>
+<div class='signature'>Task`1 <strong>ReadAllTextFileAsync</strong>(String path)</div>
+<div class='summary'>Asynchronously reads all text from the specified file.</div>
+</div>
+<div class='member'>
+<div class='signature'>Task`1 <strong>ReadBinFileAsync</strong>(String path)</div>
+<div class='summary'>Asynchronously reads the contents of a binary file from the specified path.</div>
+</div>
+<div class='member'>
+<div class='signature'>Task <strong>WriteBinFileAsync</strong>(String path, Byte[] contents)</div>
+<div class='summary'>Writes the specified byte array to a file at the given path asynchronously.</div>
+</div>
+<div class='member'>
+<div class='signature'>Task <strong>WriteTextFileAsync</strong>(String path, String content)</div>
+<div class='summary'>Asynchronously writes the specified content to a text file at the given path.</div>
+</div>
+<div class='member'>
+<div class='signature'>Task <strong>WriteTextFileAsync</strong>(String path, String[] lines)</div>
+<div class='summary'>Asynchronously writes an array of text lines to a file at the specified path, creating the directory if it does
+            not exist.</div>
+</div>
+</body></html>

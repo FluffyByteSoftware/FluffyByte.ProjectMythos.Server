@@ -5,7 +5,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
-using FluffyByte.ProjectMythos.Server.docs.FluffyByte.ProjectMythos.Server.Core;
 
 namespace FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient;
 

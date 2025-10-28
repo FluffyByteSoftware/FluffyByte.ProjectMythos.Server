@@ -1,8 +1,7 @@
-﻿using FluffyByte.ProjectMythos.Server.Core;
-using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
+﻿using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
 using FluffyByte.ProjectMythos.Server.Core.IO.Networking;
 
-namespace FluffyByte.ProjectMythos.Server.docs.FluffyByte.ProjectMythos.Server.Core;
+namespace FluffyByte.ProjectMythos.Server.Core;
 
 /// <summary>
 /// Represents a singleton class responsible for managing the lifecycle of application processes, including startup,

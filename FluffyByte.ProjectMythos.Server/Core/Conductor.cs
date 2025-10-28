@@ -1,4 +1,5 @@
-﻿using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
+﻿using System.Diagnostics;
+using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
 using FluffyByte.ProjectMythos.Server.Core.IO.Networking;
 
 namespace FluffyByte.ProjectMythos.Server.Core;
@@ -63,7 +64,6 @@ public class Conductor
         Watcher = Sentinel.Watcher;
 
         _processList.Add(Sentinel);
-        _processList.Add(Watcher);
     }
 
     /// <summary>
@@ -80,7 +80,7 @@ public class Conductor
 
         try
         {
-            foreach(var process in _processList)
+            foreach(ICoreProcess process in _processList)
             {
                 await process.RequestStartAsync(ShutdownToken);
                 LaunchedProcesses.Add(process);
@@ -107,6 +107,25 @@ public class Conductor
             CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ShutdownToken);
 
             await cts.CancelAsync();
+
+            foreach(ICoreProcess process in LaunchedProcesses)
+            {
+                await process.RequestStopAsync();
+                LaunchedProcesses.Remove(process);
+            }
+
+            if(LaunchedProcesses.Count > 0)
+            {
+                Scribe.Error($"[Conductor] I was unable to release all processes during shutdown. Remaining: {LaunchedProcesses.Count}");
+
+                foreach(ICoreProcess process in LaunchedProcesses)
+                {
+                    Scribe.Error($"[Conductor] Remaining Process: {process.Name} ({process.Guid}) State: {process.State}");
+                }
+
+
+                throw new IndexOutOfRangeException(nameof(LaunchedProcesses));
+            }
         }
         catch(Exception ex)
         {

@@ -1,149 +1,300 @@
 ﻿using System;
-using System.Net;
 using System.Net.Sockets;
 using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
 using FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient;
+using FluffyByte.ProjectMythos.Server.FluffyTypes;
 
 namespace FluffyByte.ProjectMythos.Server.Core.IO.Networking;
 
 /// <summary>
-/// Represents a process that monitors and manages vessels and raw TCP clients within the system.
+/// Watcher tracks all active network connections and their connection states (TCP-only vs TCP+UDP).
 /// </summary>
-/// <remarks>The <see cref="Watcher"/> class is responsible for maintaining collections of connected and pending
-/// vessels, as well as managing raw TCP client connections. It provides functionality to start and stop its operations
-/// asynchronously, and includes methods for registering, unregistering, and authenticating vessels.</remarks>
-/// <param name="shutdownToken">This token is passed from the Conductor and represents the necessity to shutdown.</param>
-/// <param name="sentinel">Reference to the Sentinel currently in operation.</param>
-public class Watcher(Sentinel sentinel, CancellationToken shutdownToken) : CoreProcessBase(shutdownToken)
+/// <remarks>
+/// Connection lifecycle in Watcher:
+/// 1. Raw TcpClient arrives from Sentinel
+/// 2. Upgraded to Vessel (TCP-only, unauthenticated)
+/// 3. UDP handshake completes → Vessel becomes "authenticated" (has TCP+UDP)
+/// 4. Player assignment happens much later (handled by GateWarden, not Watcher)
+/// </remarks>
+public class Watcher(Sentinel parentSentinel)
 {
+    private readonly Sentinel _sentinelParentReference = parentSentinel;
+
+    // State tracking collections
+    private readonly ThreadSafeDictionary<int, Vessel> _allVessels = [];
 
     /// <summary>
-    /// Gets the name of the watcher.
+    /// Raw TCP clients that haven't been upgraded to Vessels yet.
     /// </summary>
-    public override string Name => "Watcher";
+    public ThreadSafeList<TcpClient> PendingTcpClients { get; private set; } = [];
 
     /// <summary>
-    /// Gets the collection of vessels currently connected to the system, identified by their unique identifiers.
+    /// Gets the total number of vessels (both authenticated and unauthenticated).
     /// </summary>
-    public List<Vessel> AuthenticatedVessels { get; private set; } = [];
+    public int TotalVessels => _allVessels.Count;
 
     /// <summary>
-    /// Gets the collection of vessels managed by this instance.
+    /// Gets the number of pending TCP clients that haven't been upgraded yet.
     /// </summary>
-    public List<Vessel> Vessels { get; private set; } = [];
+    public int PendingTcpCount => PendingTcpClients.Count;
+
+    #region Registration Methods
 
     /// <summary>
-    /// Gets the collection of vessels that are pending processing.
+    /// Registers a raw TCP client that just connected.
+    /// This adds it to the pending list until it can be upgraded to a Vessel.
     /// </summary>
-    public List<Vessel> PendingVessels { get; private set; } = [];
-
-    private readonly Sentinel _sentinelReference = sentinel;
-    private readonly object _lock = new();
-
-    /// <summary>
-    /// Starts the asynchronous operation for the Watcher.
-    /// </summary>
-    /// <remarks>This method initiates the operation in an asynchronous manner.  Ensure that any required
-    /// setup or dependencies are configured before calling this method.</remarks>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    public override async Task StartAsync()
+    public void RegisterTcpClient(TcpClient tcpClient)
     {
         try
         {
-            lock (_lock)
-            {
-                AuthenticatedVessels.Clear();
-                PendingVessels.Clear();
-            }
+            PendingTcpClients.Add(tcpClient);
+            Scribe.Debug($"[Watcher] Registered raw TCP client. Pending: {PendingTcpCount}");
         }
-        catch(Exception ex)
-        {
-            Scribe.Error(ex);
-        }
-
-        await Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Stops the asynchronous operation and performs any necessary cleanup.
-    /// </summary>
-    /// <remarks>This method is typically called to gracefully shut down the operation.  Ensure that any
-    /// resources used during the operation are properly released.</remarks>
-    /// <returns>A <see cref="Task"/> that represents the asynchronous stop operation.</returns>
-    public override async Task StopAsync()
-    {
-        foreach(var vessel in AuthenticatedVessels)
-        {
-            await vessel.DisconnectAsync();
-        }
-
-        await Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Registers a new vessel in the system.
-    /// </summary>
-    /// <remarks>This method asynchronously registers the provided vessel. Ensure that the <paramref
-    /// name="vessel"/> object contains all required information before calling this method.</remarks>
-    /// <param name="vessel">The vessel to be registered. Must not be <see langword="null"/>.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public void RegisterVessel(Vessel vessel)
-    {
-        try
-        {
-            lock (_lock)
-            {
-                PendingVessels.Add(vessel);
-                Vessels.Add(vessel);
-            }
-        }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Scribe.Error(ex);
         }
     }
 
     /// <summary>
-    /// Unregisters the specified vessel from the system.
+    /// Upgrades a pending TCP client to a Vessel (wraps it with connection ID and streams).
+    /// Returns the assigned connection ID, or -1 on failure.
     /// </summary>
-    /// <remarks>This method removes the provided vessel from the system's registry. Ensure that the vessel is
-    /// no longer in use before calling this method to avoid inconsistencies.</remarks>
-    /// <param name="vessel">The vessel to be unregistered. Cannot be <see langword="null"/>.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public void UnregisterVessel(Vessel vessel)
+    public int UpgradeToVessel(TcpClient tcpClient, Vessel newVessel)
     {
         try
         {
-            lock (_lock)
-            {
-                PendingVessels.Remove(vessel);
-                AuthenticatedVessels.Remove(vessel);
-                Vessels.Remove(vessel);
-            }
+            PendingTcpClients.Remove(tcpClient);
+
+            _allVessels.Add(newVessel.Id, newVessel);
+
+            Scribe.Debug($"[Watcher] Upgraded TCP client to Vessel {newVessel.Id}. " +
+                       $"Total vessels: {TotalVessels}, Pending: {PendingTcpCount}");
+
+            return newVessel.Id;
         }
-        catch(Exception ex)
+        catch (Exception ex)
+        {
+            Scribe.Error(ex);
+            return -1;
+        }
+    }
+
+    /// <summary>
+    /// Marks a vessel as authenticated after UDP handshake completes.
+    /// This means the vessel now has BOTH TCP and UDP connections established.
+    /// </summary>
+    public bool AuthenticateVessel(int connectionId)
+    {
+        try
+        {
+            Vessel? upgradeableVessel = GetVessel(connectionId);
+
+            if (upgradeableVessel == null)
+            {
+                Scribe.Warn($"[Watcher] Cannot authenticate - vessel {connectionId} not found");
+                return false;
+            }
+
+            if (upgradeableVessel.IsAuthenticated)
+            {
+                Scribe.Warn($"[Watcher] Vessel {connectionId} is already authenticated");
+                return false;
+            }
+
+            upgradeableVessel.IsAuthenticated = true;
+            Scribe.Debug($"[Watcher] Vessel {connectionId} authenticated (UDP handshake complete)");
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Scribe.Error(ex);
+            return false;
+        }
+    }
+
+    #endregion
+
+    #region Unregistration Methods
+
+    /// <summary>
+    /// Removes a raw TCP client from pending list without creating a vessel.
+    /// Used when a connection is rejected before upgrade.
+    /// </summary>
+    public void UnregisterTcpClient(TcpClient tcpClient)
+    {
+        try
+        {
+            PendingTcpClients.Remove(tcpClient);
+            tcpClient.Close();
+            Scribe.Debug($"[Watcher] Unregistered raw TCP client. Pending: {PendingTcpCount}");
+        }
+        catch (Exception ex)
         {
             Scribe.Error(ex);
         }
     }
 
     /// <summary>
-    /// Authenticates the specified vessel to ensure it meets the required criteria for operation.
+    /// Unregisters a vessel by connection ID and cleans up resources.
     /// </summary>
-    /// <param name="vessel">The vessel to be authenticated. Cannot be null.</param>
-    public void AuthenticateVessel(Vessel vessel)
+    public void UnregisterVessel(int connectionId)
     {
         try
         {
-            lock (_lock)
+            if (_allVessels.Remove(connectionId, out Vessel? vessel))
             {
-                PendingVessels.Remove(vessel);
-                AuthenticatedVessels.Add(vessel);
+                if(vessel == null)
+                {
+                    Scribe.Error($"[Watcher] Vessel {connectionId} was null during unregistration. THROWING.");
+                    throw new NullReferenceException(nameof(vessel));
+                }
+
+                vessel.Disconnect();
+                Scribe.Debug($"[Watcher] Unregistered vessel {connectionId}. Total vessels: {TotalVessels}");
+            }
+            else
+            {
+                Scribe.Warn($"[Watcher] Attempted to unregister non-existent vessel {connectionId}");
             }
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Scribe.NetworkError(ex);
         }
     }
+
+    /// <summary>
+    /// Removes all vessels that are marked as disconnecting.
+    /// Returns the number of vessels cleaned up.
+    /// </summary>
+    public int CleanupDisconnectedVessels()
+    {
+        try
+        {
+            var disconnecting = GetDisconnectingVessels();
+
+            foreach (var vessel in disconnecting)
+            {
+                _allVessels.Remove(vessel.Id);
+            }
+
+            if (disconnecting.Count > 0)
+            {
+                Scribe.Debug($"[Watcher] Cleaned up {disconnecting.Count} disconnected vessels");
+            }
+
+            return disconnecting.Count;
+        }
+        catch (Exception ex)
+        {
+            Scribe.Error(ex);
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters ALL connections and cleans up resources.
+    /// Called during server shutdown.
+    /// </summary>
+    public void UnregisterAll()
+    {
+        try
+        {
+            int vesselCount = TotalVessels;
+            int pendingCount = PendingTcpCount;
+
+            // Disconnect all vessels
+            _allVessels.ForEach((id, vessel) =>
+            {
+                try
+                {
+                    vessel.Disconnect();
+                }
+                catch (Exception ex)
+                {
+                    Scribe.NetworkError(ex);
+                }
+            });
+
+            // Close all pending TCP clients
+            PendingTcpClients.ForEach(client =>
+            {
+                try
+                {
+                    client.Close();
+                }
+                catch (Exception ex)
+                {
+                    Scribe.NetworkError(ex);
+                }
+            });
+
+            // Clear collections
+            _allVessels.Clear();
+            PendingTcpClients.Clear();
+
+            Scribe.Debug($"[Watcher] Unregistered all connections " +
+                       $"({vesselCount} vessels, {pendingCount} pending)");
+        }
+        catch (Exception ex)
+        {
+            Scribe.Error(ex);
+        }
+    }
+
+    #endregion
+
+    #region Query Methods
+
+    /// <summary>
+    /// Gets a vessel by its connection ID.
+    /// </summary>
+    public Vessel? GetVessel(int connectionId)
+    {
+        return _allVessels.GetValueOrDefault(connectionId);
+    }
+
+    /// <summary>
+    /// Gets all vessels regardless of authentication state.
+    /// </summary>
+    public List<Vessel> GetAllVessels()
+    {
+        return [.. _allVessels.Values];
+    }
+
+    /// <summary>
+    /// Gets all vessels that have NOT completed UDP handshake (TCP-only).
+    /// </summary>
+    public List<Vessel> GetUnauthenticatedVessels()
+    {
+        return [.. _allVessels.WhereValue(v => !v.IsAuthenticated).Values];
+    }
+
+    /// <summary>
+    /// Gets all vessels that HAVE completed UDP handshake (TCP+UDP).
+    /// </summary>
+    public List<Vessel> GetAuthenticatedVessels()
+    {
+        return [.. _allVessels.WhereValue(v => v.IsAuthenticated).Values];
+    }
+
+    /// <summary>
+    /// Gets all vessels that are currently disconnecting.
+    /// </summary>
+    public List<Vessel> GetDisconnectingVessels()
+    {
+        return [.. _allVessels.WhereValue(v => v.Disconnecting).Values];
+    }
+
+    /// <summary>
+    /// Checks if a connection ID is currently active.
+    /// </summary>
+    public bool IsVesselActive(int connectionId)
+    {
+        return _allVessels.ContainsKey(connectionId);
+    }
+    #endregion
 }

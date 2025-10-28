@@ -38,12 +38,18 @@ public static class Program
             // Do some stuff in the future
         }
 
+        Console.WriteLine("Press any key to start bootstrap.");
+        
+        Console.ReadLine();
+
+        await Conductor.Instance.RequestStartupAsync();
+
         GenerateDocumentation();
 
         Console.WriteLine("Press any key to terminate.");
         Console.ReadLine();
 
-        await Task.CompletedTask;
+        
     }
 
     /// <summary>

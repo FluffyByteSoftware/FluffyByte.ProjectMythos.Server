@@ -58,7 +58,7 @@ public class Sentinel : CoreProcessBase
     /// <param name="shutdownToken">A <see cref="CancellationToken"/> that signals when the sentinel should shut down.</param>
     public Sentinel(CancellationToken shutdownToken) : base(shutdownToken)
     {
-        Watcher = new(this, shutdownToken);
+        Watcher = new(this);
         _currentClientCount = 0;
     }
 

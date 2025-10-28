@@ -27,6 +27,11 @@ public class Vessel(TcpClient tcpClient) : IDisposable
     public bool Disconnecting => _disconnecting;
 
     /// <summary>
+    /// Indicates whether the user is authenticated and has created a UdpClient.
+    /// </summary>
+    public bool IsAuthenticated = false;
+
+    /// <summary>
     /// Represents the underlying TCP client used for network communication.
     /// </summary>
     /// <remarks>This field is used internally to manage the connection to a remote endpoint. It is
@@ -76,7 +81,7 @@ public class Vessel(TcpClient tcpClient) : IDisposable
 
         _tcpClient.Close();
 
-        Conductor.Instance.Sentinel.Watcher.UnregisterVessel(this);
+        Conductor.Instance.Sentinel.Watcher.UnregisterVessel(Id);
 
         HandleDisconnect();
         await Task.CompletedTask;
@@ -94,7 +99,7 @@ public class Vessel(TcpClient tcpClient) : IDisposable
 
         _disconnecting = true;
 
-        Conductor.Instance.Sentinel.Watcher.UnregisterVessel(this);
+        Conductor.Instance.Sentinel.Watcher.UnregisterVessel(Id);
 
         HandleDisconnect();
     }

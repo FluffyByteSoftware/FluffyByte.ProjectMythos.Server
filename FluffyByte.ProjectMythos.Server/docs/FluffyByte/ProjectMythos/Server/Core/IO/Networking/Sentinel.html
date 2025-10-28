@@ -1,6 +1,6 @@
 <!DOCTYPE html><html><head>
 <meta charset='utf-8'>
-<title>Vessel</title>
+<title>Sentinel</title>
 <style>
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; line-height: 1.6; max-width: 1200px; }
             .header { margin-bottom: 20px; }
@@ -23,31 +23,41 @@
             </style>
 </head><body>
 <div class='header'><a href='../../../../../../index.html'>← Back to Index</a></div>
-<h1>class Vessel</h1>
+<h1>class Sentinel</h1>
 <div class='namespace'>Namespace: FluffyByte.ProjectMythos.Server.Core.IO.Networking</div>
-<div class='type-summary'>Represents a networking wrapper for client communication.</div>
+<div class='type-summary'>Todo Sentinel handles monitoring for new network connections.</div>
 <h2>Relationships</h2>
 <div class='relationships'>
+<div><strong>Inherits from:</strong> <a href='FluffyByte\ProjectMythos\Server\Core\CoreProcessBase.html'>CoreProcessBase</a></div>
 <div><strong>Implements:</strong> 
-IDisposable
+<a href='FluffyByte\ProjectMythos\Server\Core\ICoreProcess.html'>ICoreProcess</a>
 </div>
 </div>
 <h2>Constructors</h2>
 <div class='member'>
-<div class='signature'><strong>Vessel</strong>(TcpClient tcpClient, Sentinel sentinel)</div>
-<div class='summary'>Represents a networking wrapper for client communication.</div>
+<div class='signature'><strong>Sentinel</strong>(CancellationToken shutdownToken)</div>
+<div class='summary'>Initializes a new instance of the  class, which monitors and manages client connections.</div>
+</div>
+<h2>Properties</h2>
+<div class='member'>
+<div class='signature'>Boolean <strong>AcceptingNewClients</strong> { get; set; }</div>
+<div class='summary'>Gets a value indicating whether the system is currently accepting new client connections.</div>
+</div>
+<div class='member'>
+<div class='signature'>String <strong>Name</strong> { get; }</div>
+<div class='summary'>Sentinel process name.</div>
+</div>
+<div class='member'>
+<div class='signature'>Watcher <strong>Watcher</strong> { get; set; }</div>
+<div class='summary'>Gets the instance of the  associated with this object.</div>
 </div>
 <h2>Methods</h2>
 <div class='member'>
-<div class='signature'>Void <strong>Disconnect</strong>()</div>
-<div class='summary'>Disconnects the current instance from its associated watcher and performs necessary cleanup.</div>
+<div class='signature'>Task <strong>StartAsync</strong>()</div>
+<div class='summary'>Starts the asynchronous operation.</div>
 </div>
 <div class='member'>
-<div class='signature'>Task <strong>DisconnectAsync</strong>()</div>
-<div class='summary'>Disconnects the current connection, ensuring that the operation is performed only once.</div>
-</div>
-<div class='member'>
-<div class='signature'>Void <strong>Dispose</strong>()</div>
-<div class='summary'>Releases the resources used by the current instance of the class.</div>
+<div class='signature'>Task <strong>StopAsync</strong>()</div>
+<div class='summary'>Local method to implement custom behaviour for Sentinel to do when stopping.</div>
 </div>
 </body></html>

@@ -35,7 +35,7 @@ public abstract class CoreProcessBase(CancellationToken shutdownToken) : ICorePr
     /// </summary>
     /// <remarks>This token is initialized as a new instance of <see cref="CancellationToken"/>  and can be
     /// used to monitor or trigger cancellation during the shutdown process.</remarks>
-    private CancellationToken _shutdownToken = shutdownToken;
+    internal CancellationToken _shutdownToken = shutdownToken;
 
     /// <summary>
     /// Initiates the start process for the current instance asynchronously.

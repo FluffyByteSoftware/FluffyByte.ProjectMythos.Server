@@ -1,6 +1,6 @@
 <!DOCTYPE html><html><head>
 <meta charset='utf-8'>
-<title>Vessel</title>
+<title>CoreProcessState</title>
 <style>
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; line-height: 1.6; max-width: 1200px; }
             .header { margin-bottom: 20px; }
@@ -22,32 +22,16 @@
             li { margin: 10px 0; padding: 10px; background: #fafafa; border-radius: 3px; }
             </style>
 </head><body>
-<div class='header'><a href='../../../../../../index.html'>← Back to Index</a></div>
-<h1>class Vessel</h1>
-<div class='namespace'>Namespace: FluffyByte.ProjectMythos.Server.Core.IO.Networking</div>
-<div class='type-summary'>Represents a networking wrapper for client communication.</div>
+<div class='header'><a href='../../../../index.html'>← Back to Index</a></div>
+<h1>enum CoreProcessState</h1>
+<div class='namespace'>Namespace: FluffyByte.ProjectMythos.Server.Core</div>
+<div class='type-summary'>Defines the various states that a CoreProcess can be in.
+            New = 0, Loading = 1, Running = 2, Stopping = 3, Stopped = 4</div>
 <h2>Relationships</h2>
 <div class='relationships'>
+<div><strong>Inherits from:</strong> Enum</div>
 <div><strong>Implements:</strong> 
-IDisposable
+IComparable, ISpanFormattable, IFormattable, IConvertible
 </div>
-</div>
-<h2>Constructors</h2>
-<div class='member'>
-<div class='signature'><strong>Vessel</strong>(TcpClient tcpClient, Sentinel sentinel)</div>
-<div class='summary'>Represents a networking wrapper for client communication.</div>
-</div>
-<h2>Methods</h2>
-<div class='member'>
-<div class='signature'>Void <strong>Disconnect</strong>()</div>
-<div class='summary'>Disconnects the current instance from its associated watcher and performs necessary cleanup.</div>
-</div>
-<div class='member'>
-<div class='signature'>Task <strong>DisconnectAsync</strong>()</div>
-<div class='summary'>Disconnects the current connection, ensuring that the operation is performed only once.</div>
-</div>
-<div class='member'>
-<div class='signature'>Void <strong>Dispose</strong>()</div>
-<div class='summary'>Releases the resources used by the current instance of the class.</div>
 </div>
 </body></html>

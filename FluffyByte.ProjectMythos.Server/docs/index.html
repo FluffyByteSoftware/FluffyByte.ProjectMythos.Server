@@ -25,6 +25,18 @@
 <h1>API Documentation</h1>
 <h2>FluffyByte.ProjectMythos.Server.Core</h2>
 <ul>
+<li><span class='type-kind'>abstract class</span> <a href='FluffyByte\ProjectMythos\Server\Core\CoreProcessBase.html'>CoreProcessBase</a>
+<div class='summary'>Represents the base class for core processes, providing a framework for managing process lifecycle operations such
+            as starting and stopping.</div>
+</li>
+<li><span class='type-kind'>enum</span> <a href='FluffyByte\ProjectMythos\Server\Core\CoreProcessState.html'>CoreProcessState</a>
+<div class='summary'>Defines the various states that a CoreProcess can be in.
+            New = 0, Loading = 1, Running = 2, Stopping = 3, Stopped = 4</div>
+</li>
+<li><span class='type-kind'>interface</span> <a href='FluffyByte\ProjectMythos\Server\Core\ICoreProcess.html'>ICoreProcess</a>
+<div class='summary'>Defines the contract for a core process, providing properties to retrieve its name and unique identifier, as well as
+            methods to manage its lifecycle through asynchronous start and stop operations.</div>
+</li>
 <li><span class='type-kind'>static class</span> <a href='FluffyByte\ProjectMythos\Server\Core\Program.html'>Program</a>
 <div class='summary'>Represents the entry point of the application.</div>
 </li>
@@ -51,8 +63,14 @@
 </ul>
 <h2>FluffyByte.ProjectMythos.Server.Core.IO.Networking</h2>
 <ul>
+<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\Sentinel.html'>Sentinel</a>
+<div class='summary'>Todo Sentinel handles monitoring for new network connections.</div>
+</li>
 <li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\Vessel.html'>Vessel</a>
 <div class='summary'>Represents a networking wrapper for client communication.</div>
+</li>
+<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\Watcher.html'>Watcher</a>
+<div class='summary'>Represents a process that monitors and manages vessels and raw TCP clients within the system.</div>
 </li>
 </ul>
 </body></html>

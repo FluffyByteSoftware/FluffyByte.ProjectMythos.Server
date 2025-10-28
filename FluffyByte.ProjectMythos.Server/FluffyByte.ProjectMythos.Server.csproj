@@ -8,9 +8,4 @@
 	  <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
-
-  <ItemGroup>
-    <Folder Include="docs\" />
-  </ItemGroup>
-
 </Project>

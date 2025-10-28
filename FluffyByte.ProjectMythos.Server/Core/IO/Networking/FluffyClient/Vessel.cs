@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
 
-namespace FluffyByte.ProjectMythos.Server.Core.IO.Networking;
+namespace FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient;
 
 // The networking wrapper for our clients.
 

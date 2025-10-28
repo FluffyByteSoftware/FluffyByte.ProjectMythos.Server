@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
+using FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient;
 
 namespace FluffyByte.ProjectMythos.Server.Core.IO.Networking;
 
@@ -24,7 +25,12 @@ public class Watcher(Sentinel sentinel, CancellationToken shutdownToken) : CoreP
     /// <summary>
     /// Gets the collection of vessels currently connected to the system, identified by their unique identifiers.
     /// </summary>
-    public List<Vessel> ConnectedVessels { get; private set; } = [];
+    public List<Vessel> AuthenticatedVessels { get; private set; } = [];
+
+    /// <summary>
+    /// Gets the collection of vessels managed by this instance.
+    /// </summary>
+    public List<Vessel> Vessels { get; private set; } = [];
 
     /// <summary>
     /// Gets the collection of vessels that are pending processing.
@@ -46,7 +52,7 @@ public class Watcher(Sentinel sentinel, CancellationToken shutdownToken) : CoreP
         {
             lock (_lock)
             {
-                ConnectedVessels.Clear();
+                AuthenticatedVessels.Clear();
                 PendingVessels.Clear();
             }
         }
@@ -66,7 +72,7 @@ public class Watcher(Sentinel sentinel, CancellationToken shutdownToken) : CoreP
     /// <returns>A <see cref="Task"/> that represents the asynchronous stop operation.</returns>
     public override async Task StopAsync()
     {
-        foreach(var vessel in ConnectedVessels)
+        foreach(var vessel in AuthenticatedVessels)
         {
             await vessel.DisconnectAsync();
         }
@@ -86,7 +92,10 @@ public class Watcher(Sentinel sentinel, CancellationToken shutdownToken) : CoreP
         try
         {
             lock (_lock)
+            {
                 PendingVessels.Add(vessel);
+                Vessels.Add(vessel);
+            }
         }
         catch(Exception ex)
         {
@@ -108,7 +117,8 @@ public class Watcher(Sentinel sentinel, CancellationToken shutdownToken) : CoreP
             lock (_lock)
             {
                 PendingVessels.Remove(vessel);
-                ConnectedVessels.Remove(vessel);
+                AuthenticatedVessels.Remove(vessel);
+                Vessels.Remove(vessel);
             }
         }
         catch(Exception ex)
@@ -128,7 +138,7 @@ public class Watcher(Sentinel sentinel, CancellationToken shutdownToken) : CoreP
             lock (_lock)
             {
                 PendingVessels.Remove(vessel);
-                ConnectedVessels.Add(vessel);
+                AuthenticatedVessels.Add(vessel);
             }
         }
         catch(Exception ex)

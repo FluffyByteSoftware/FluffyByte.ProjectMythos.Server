@@ -46,12 +46,24 @@ public abstract class CoreProcessBase(CancellationToken shutdownToken) : ICorePr
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task RequestStartAsync(CancellationToken shutdownToken)
     {
-        Scribe.Info($"[{Name}] I have been asked to start.");
+        Scribe.Debug($"[{Name}] I have been asked to start.");
 
+        try
+        {
+            _shutdownToken = shutdownToken;
+            
+            State = CoreProcessState.Loading;
+            
+            await StartAsync();
 
-        _shutdownToken = shutdownToken;
+            State = CoreProcessState.Running;
 
-        await StartAsync();
+            Scribe.Debug($"[{Name}] I am now running.");
+        }
+        catch(Exception ex)
+        {
+            Scribe.Error(ex);
+        }
     }
 
     /// <summary>
@@ -62,18 +74,22 @@ public abstract class CoreProcessBase(CancellationToken shutdownToken) : ICorePr
     /// <returns>A task that represents the asynchronous operation.</returns>
     public async Task RequestStopAsync()
     {
-        Scribe.Info($"[{Name}] I have been asked to stop.");
+        Scribe.Debug($"[{Name}] I have been asked to stop.");
 
         try
         {
+            State = CoreProcessState.Stopping;
 
+            await StopAsync();
+
+            State = CoreProcessState.Stopped;
+            
+            Scribe.Debug($"[{Name}] I have stopped.");
         }
         catch(Exception ex)
         {
             Scribe.Error(ex);
         }
-
-        await StopAsync();
     }
 
     /// <summary>

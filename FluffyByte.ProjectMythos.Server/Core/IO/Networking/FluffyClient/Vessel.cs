@@ -5,28 +5,65 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
+using FluffyByte.ProjectMythos.Server.docs.FluffyByte.ProjectMythos.Server.Core;
 
 namespace FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient;
 
-// The networking wrapper for our clients.
-
 /// <summary>
-/// Represents a networking wrapper for client communication.
+/// Represents a vessel class which wraps around a TcpClient and UdpClient for managing a network connection.
 /// </summary>
-/// <remarks>This class serves as the primary interface for managing network interactions with clients.  It
-/// provides functionality to facilitate communication and data exchange in a networked environment.</remarks>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Vessel"/> class with the specified TCP client and sentinel.
-/// </remarks>
-/// <param name="tcpClient">The <see cref="TcpClient"/> used to establish and manage the network connection.</param>
-/// <param name="sentinel">The <see cref="Sentinel"/> instance associated with this vessel, used for 
-/// monitoring or controlling its behavior.</param>
-public class Vessel(TcpClient tcpClient, Sentinel sentinel) : IDisposable
+/// <remarks>The <see cref="Vessel"/> class encapsulates the functionality for managing a network connection using
+/// a <see cref="TcpClient"/>. It provides mechanisms for safe disconnection, resource cleanup, and access to utilities
+/// such as metrics and safety mechanisms. Instances of this class are uniquely identified by an <see cref="Id"/> and a
+/// <see cref="Guid"/>. The class is designed to be used in scenarios where reliable network communication and
+/// monitoring are required.</remarks>
+/// <param name="tcpClient">The TcpClient that the Vessel wraps around.</param>
+public class Vessel(TcpClient tcpClient) : IDisposable
 {
     private bool _disconnecting = false;
-    private readonly TcpClient _tcpClient = tcpClient;
-    private readonly Sentinel _sentinelReference = sentinel;
 
+    /// <summary>
+    /// Gets a value indicating whether the system is in the process of disconnecting.
+    /// </summary>
+    public bool Disconnecting => _disconnecting;
+
+    /// <summary>
+    /// Represents the underlying TCP client used for network communication.
+    /// </summary>
+    /// <remarks>This field is used internally to manage the connection to a remote endpoint. It is
+    /// initialized with the provided <see cref="TcpClient"/> instance and cannot be modified after
+    /// construction.</remarks>
+    internal readonly TcpClient _tcpClient = tcpClient;
+    internal readonly UdpClient? _udpClient;
+
+    internal readonly NetworkStream _tcpStream = tcpClient.GetStream();
+    internal int UdpPort = -1;
+
+    private static int _id = 0;
+    /// <summary>
+    /// Gets the simple client identifier for the instance.
+    /// </summary>
+    public int Id { get; private set; } = _id++;
+
+    /// <summary>
+    /// Gets the unique identifier for this instance.
+    /// </summary>
+    public Guid Guid { get; private set; } = Guid.NewGuid();
+
+    /// <summary>
+    /// Represents the name of the vessel.
+    /// </summary>
+    public string Name = "Unnamed Vessel";
+
+    /// <summary>
+    /// The TcpIO instance handles TCP input/output operations for this vessel.
+    /// </summary>
+    public TcpIO TcpIO => new(this);
+    /// <summary>
+    /// Gets an object that provides access to various metrics related to the system's performance and behavior.
+    /// </summary>
+    public Metrics Metrics => new(this);
+    
     /// <summary>
     /// Disconnects the current connection, ensuring that the operation is performed only once.
     /// </summary>
@@ -39,7 +76,8 @@ public class Vessel(TcpClient tcpClient, Sentinel sentinel) : IDisposable
         _disconnecting = true;
 
         _tcpClient.Close();
-        _sentinelReference.Watcher.UnregisterVessel(this);
+
+        Conductor.Instance.Sentinel.Watcher.UnregisterVessel(this);
 
         HandleDisconnect();
         await Task.CompletedTask;
@@ -57,7 +95,7 @@ public class Vessel(TcpClient tcpClient, Sentinel sentinel) : IDisposable
 
         _disconnecting = true;
 
-        _sentinelReference.Watcher.UnregisterVessel(this);
+        Conductor.Instance.Sentinel.Watcher.UnregisterVessel(this);
 
         HandleDisconnect();
     }
@@ -74,9 +112,10 @@ public class Vessel(TcpClient tcpClient, Sentinel sentinel) : IDisposable
             return;
 
         _tcpClient.Dispose();
-
+        Metrics.Dispose();
+        TcpIO.Dispose();
+        
         GC.SuppressFinalize(this);
-        GC.Collect();
     }
 
     /// <summary>

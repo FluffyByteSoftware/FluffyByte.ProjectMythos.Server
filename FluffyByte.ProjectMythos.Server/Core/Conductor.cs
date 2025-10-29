@@ -84,6 +84,11 @@ public class Conductor
             {
                 await process.RequestStartAsync(ShutdownToken);
                 LaunchedProcesses.Add(process);
+
+                if(process.Name == "Sentinel")
+                {
+                    Watcher = Sentinel.Watcher;
+                }
             }
         }
         catch(Exception ex)
@@ -94,40 +99,58 @@ public class Conductor
     }
 
     /// <summary>
-    /// Requests a graceful shutdown of the application.
+    /// Initiates an asynchronous shutdown process, stopping all launched processes and clearing their references.
     /// </summary>
-    /// <remarks>This method initiates an asynchronous shutdown process, allowing the application to complete
-    /// any ongoing tasks  before terminating. Ensure that all necessary cleanup operations are handled during the
-    /// shutdown process.</remarks>
-    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>This method signals a shutdown by canceling the associated shutdown token and attempts to
+    /// stop all processes that were previously launched. If any processes fail to stop, an exception is thrown, and the
+    /// details of the stuck processes are logged. The method ensures that the list of launched processes is cleared
+    /// after the shutdown attempt.</remarks>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException">Thrown if one or more processes fail to stop during the shutdown process.</exception>
     public async Task RequestShutdownAsync()
     {
         try
         {
+            Scribe.Info("[Conductor] Initiating shutdown...");
+
+            // Signal cancellation
             CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ShutdownToken);
 
             await cts.CancelAsync();
 
-            foreach(ICoreProcess process in LaunchedProcesses)
+            var processesToStop = LaunchedProcesses.ToList();  
+
+            Scribe.Info($"[Conductor] Stopping {processesToStop.Count} processes...");
+
+            foreach (ICoreProcess process in processesToStop)
             {
+                Scribe.Debug($"[Conductor] Stopping: {process.Name}");
                 await process.RequestStopAsync();
-                LaunchedProcesses.Remove(process);
             }
 
-            if(LaunchedProcesses.Count > 0)
-            {
-                Scribe.Error($"[Conductor] I was unable to release all processes during shutdown. Remaining: {LaunchedProcesses.Count}");
+            // Now clear the original list
+            LaunchedProcesses.Clear();
 
-                foreach(ICoreProcess process in LaunchedProcesses)
+            // Check for processes that failed to stop
+            var stillRunning = processesToStop.Where(p =>
+                p.State != CoreProcessState.Stopped &&
+                p.State != CoreProcessState.Stopping).ToList();
+
+            if (stillRunning.Count > 0)
+            {
+                Scribe.Error($"[Conductor] Unable to stop all processes. Remaining: {stillRunning.Count}");
+
+                foreach (ICoreProcess process in stillRunning)
                 {
-                    Scribe.Error($"[Conductor] Remaining Process: {process.Name} ({process.Guid}) State: {process.State}");
+                    Scribe.Error($"[Conductor] Stuck process: {process.Name} ({process.Guid}) State: {process.State}");
                 }
 
-
-                throw new IndexOutOfRangeException(nameof(LaunchedProcesses));
+                throw new InvalidOperationException($"Failed to stop {stillRunning.Count} processes");
             }
+
+            Scribe.Info("[Conductor] Shutdown complete");
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Scribe.Error(ex);
         }

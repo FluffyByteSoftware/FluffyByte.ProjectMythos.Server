@@ -23,8 +23,18 @@
             </style>
 </head><body>
 <h1>API Documentation</h1>
+<h2>FluffyByte.ProjectMythos.Server</h2>
+<ul>
+<li><span class='type-kind'>static class</span> <a href='FluffyByte\ProjectMythos\Server\Program.html'>Program</a>
+<div class='summary'>Represents the entry point of the application.</div>
+</li>
+</ul>
 <h2>FluffyByte.ProjectMythos.Server.Core</h2>
 <ul>
+<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\Conductor.html'>Conductor</a>
+<div class='summary'>Represents a singleton class responsible for managing the lifecycle of application processes, including startup,
+            shutdown, and monitoring operations.</div>
+</li>
 <li><span class='type-kind'>abstract class</span> <a href='FluffyByte\ProjectMythos\Server\Core\CoreProcessBase.html'>CoreProcessBase</a>
 <div class='summary'>Represents the base class for core processes, providing a framework for managing process lifecycle operations such
             as starting and stopping.</div>
@@ -36,9 +46,6 @@
 <li><span class='type-kind'>interface</span> <a href='FluffyByte\ProjectMythos\Server\Core\ICoreProcess.html'>ICoreProcess</a>
 <div class='summary'>Defines the contract for a core process, providing properties to retrieve its name and unique identifier, as well as
             methods to manage its lifecycle through asynchronous start and stop operations.</div>
-</li>
-<li><span class='type-kind'>static class</span> <a href='FluffyByte\ProjectMythos\Server\Core\Program.html'>Program</a>
-<div class='summary'>Represents the entry point of the application.</div>
 </li>
 </ul>
 <h2>FluffyByte.ProjectMythos.Server.Core.IO.Debug</h2>
@@ -64,20 +71,41 @@
 <h2>FluffyByte.ProjectMythos.Server.Core.IO.Networking</h2>
 <ul>
 <li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\Sentinel.html'>Sentinel</a>
-<div class='summary'>Todo Sentinel handles monitoring for new network connections.</div>
+<div class='summary'>Sentinel handles monitoring for new network connections and manages the TCP/UDP handshake process.</div>
 </li>
-<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\Vessel.html'>Vessel</a>
-<div class='summary'>Represents a networking wrapper for client communication.</div>
+<li><span class='type-kind'>enum</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\UdpPacketType.html'>UdpPacketType</a>
+<div class='summary'>Defines the types of UDP packets used in the communication protocol.</div>
 </li>
 <li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\Watcher.html'>Watcher</a>
-<div class='summary'>Represents a process that monitors and manages vessels and raw TCP clients within the system.</div>
+<div class='summary'>Watcher tracks all active network connections and their connection states (TCP-only vs TCP+UDP).</div>
 </li>
 </ul>
-<h2>FluffyByte.ProjectMythos.Server.docs.FluffyByte.ProjectMythos.Server.Core</h2>
+<h2>FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient</h2>
 <ul>
-<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\docs\FluffyByte\ProjectMythos\Server\Core\Conductor.html'>Conductor</a>
-<div class='summary'>Represents a singleton class responsible for managing the lifecycle of application processes, including startup,
-            shutdown, and monitoring operations.</div>
+<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\FluffyClient\Metrics.html'>Metrics</a>
+<div class='summary'>Provides functionality for tracking and managing metrics related to a  instance, including
+            connection status, data transfer statistics, and response timestamps.</div>
+</li>
+<li><span class='type-kind'>static class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\FluffyClient\SafetyVest.html'>SafetyVest</a>
+<div class='summary'>Provides a set of safety-related utility methods for validating and managing vessel network connections.</div>
+</li>
+<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\FluffyClient\TcpIO.html'>TcpIO</a>
+<div class='summary'>Provides functionality for managing TCP-based input and output operations for an associated vessel.</div>
+</li>
+<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\FluffyClient\UdpIO.html'>UdpIO</a>
+<div class='summary'>Provides functionality for managing UDP-based input and output operations for an associated vessel.</div>
+</li>
+<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\FluffyClient\Vessel.html'>Vessel</a>
+<div class='summary'>Represents a vessel class which wraps around a TcpClient and UdpClient for managing a network connection.</div>
+</li>
+</ul>
+<h2>FluffyByte.ProjectMythos.Server.FluffyTypes</h2>
+<ul>
+<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\FluffyTypes\ThreadSafeDictionary`2.html'>ThreadSafeDictionary`2</a>
+<div class='summary'>Represents a thread-safe dictionary that allows concurrent access to key-value pairs.</div>
+</li>
+<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\FluffyTypes\ThreadSafeList`1.html'>ThreadSafeList`1</a>
+<div class='summary'>Represents a thread-safe, generic list that provides synchronized access to its elements.</div>
 </li>
 </ul>
 </body></html>

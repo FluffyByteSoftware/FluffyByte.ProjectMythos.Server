@@ -98,7 +98,7 @@ public class TcpIO : IDisposable
         }
         catch(Exception ex)
         {
-            Scribe.NetworkError(ex);
+            Scribe.NetworkError(ex, _vesselParentReference);
             _vesselParentReference.Disconnect();
         }
 
@@ -156,7 +156,7 @@ public class TcpIO : IDisposable
         }
         catch(Exception ex)
         {
-            Scribe.NetworkError(ex);
+            Scribe.NetworkError(ex, _vesselParentReference);
             _vesselParentReference.Disconnect();
 
             return null;
@@ -207,7 +207,7 @@ public class TcpIO : IDisposable
         }
         catch(Exception ex)
         {
-            Scribe.NetworkError(ex);
+            Scribe.NetworkError(ex, _vesselParentReference);
             _vesselParentReference.Disconnect();
         }
     }

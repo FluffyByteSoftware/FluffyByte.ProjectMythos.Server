@@ -176,17 +176,20 @@ public static class Scribe
     public static void Critical(Exception exception, [CallerFilePath] string callerFilePath = "")
         => InternalLog(LogLevel.Critical, exception.Message, exception, callerFilePath);
 
+
     /// <summary>
-    /// Logs network-related exceptions with an appropriate log level based on the exception type.
+    /// Logs network-related exceptions and handles specific cases based on the exception type.
     /// </summary>
-    /// <remarks>This method categorizes common network exceptions, such as <see cref="IOException"/>, <see
-    /// cref="ObjectDisposedException"/>, and <see cref="System.Net.Sockets.SocketException"/>, as lower-severity issues
-    /// and logs them at the <see cref="LogLevel.Debug"/> level. All other exceptions are treated as unexpected and
-    /// logged at the <see cref="LogLevel.Error"/> level.</remarks>
-    /// <param name="exception">The exception to be logged. Must not be <see langword="null"/>.</param>
+    /// <remarks>This method categorizes network exceptions into common and unexpected types. Common network
+    /// exceptions, such as <see cref="IOException"/>, <see cref="ObjectDisposedException"/>, and <see
+    /// cref="System.Net.Sockets.SocketException"/>, are logged at the debug level. Unexpected exceptions are logged as
+    /// errors, and additional handling may be performed for specific caller types.  If the <paramref name="caller"/> is
+    /// of type "Vessel", the method attempts to invoke its asynchronous disconnection logic.</remarks>
+    /// <param name="exception">The exception that occurred. Must not be <see langword="null"/>.</param>
+    /// <param name="caller">The object that triggered the exception, or <see langword="null"/> if unavailable.</param>
     /// <param name="callerFilePath">The file path of the source code that invoked this method. This parameter is automatically populated by the
-    /// compiler and should not be explicitly provided in most cases.</param>
-    public static void NetworkError(Exception exception, [CallerFilePath] string callerFilePath = "")
+    /// compiler.</param>
+    public static void NetworkError(Exception exception, object? caller, [CallerFilePath] string callerFilePath = "")
     {
         switch (exception)
         {
@@ -199,6 +202,16 @@ public static class Scribe
             default:
                 // Other exceptions are logged as errors
                 InternalLog(LogLevel.Error, $"Unexpected network exception: {exception.Message}", exception, callerFilePath);
+                
+                var type = caller?.GetType().Name;
+
+                if(type == "Vessel")
+                {
+                    Task.Run(async () =>
+                    {
+                        await (caller?.GetType().GetMethod("DisconnectAsync")?.Invoke(caller, []) as Task ?? Task.CompletedTask);
+                    });
+                }
                 break;
 
         }

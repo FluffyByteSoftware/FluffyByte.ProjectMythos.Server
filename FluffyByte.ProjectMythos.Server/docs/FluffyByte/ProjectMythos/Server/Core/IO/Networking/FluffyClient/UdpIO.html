@@ -1,0 +1,82 @@
+<!DOCTYPE html><html><head>
+<meta charset='utf-8'>
+<title>UdpIO</title>
+<style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; line-height: 1.6; max-width: 1200px; }
+            .header { margin-bottom: 20px; }
+            .header a { text-decoration: none; color: #0066cc; }
+            h1 { color: #333; border-bottom: 2px solid #0066cc; padding-bottom: 10px; }
+            h2 { color: #555; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+            .namespace { color: #666; font-size: 0.9em; margin-bottom: 20px; }
+            .type-summary { background: #f0f8ff; padding: 15px; border-left: 4px solid #0066cc; margin: 20px 0; }
+            .relationships { background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0; }
+            .relationships div { margin: 5px 0; }
+            .member { margin: 15px 0; padding: 15px; background: #fafafa; border-radius: 5px; }
+            .signature { font-family: 'Courier New', monospace; color: #333; margin-bottom: 8px; }
+            .signature strong { color: #0066cc; }
+            .summary { color: #555; font-size: 0.95em; margin-top: 8px; }
+            .type-kind { display: inline-block; background: #e0e0e0; padding: 2px 8px; border-radius: 3px; font-size: 0.85em; margin-right: 5px; }
+            a { color: #0066cc; text-decoration: none; }
+            a:hover { text-decoration: underline; }
+            ul { list-style-type: none; padding-left: 0; }
+            li { margin: 10px 0; padding: 10px; background: #fafafa; border-radius: 3px; }
+            </style>
+</head><body>
+<div class='header'><a href='../../../../../../../index.html'>← Back to Index</a></div>
+<h1>class UdpIO</h1>
+<div class='namespace'>Namespace: FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient</div>
+<div class='type-summary'>Provides functionality for managing UDP-based input and output operations for an associated vessel.</div>
+<h2>Relationships</h2>
+<div class='relationships'>
+<div><strong>Implements:</strong> 
+IDisposable
+</div>
+</div>
+<h2>Constructors</h2>
+<div class='member'>
+<div class='signature'><strong>UdpIO</strong>(Vessel parent)</div>
+<div class='summary'>Initializes a new instance of the  class with the specified parent vessel.</div>
+</div>
+<div class='member'>
+<div class='signature'><strong>UdpIO</strong>(Vessel parent, IPEndPoint udpEndpoint)</div>
+<div class='summary'>Initializes a new instance of the  class with UDP endpoint information.</div>
+</div>
+<h2>Properties</h2>
+<div class='member'>
+<div class='signature'>Boolean <strong>IsHandshakeComplete</strong> { get; set; }</div>
+<div class='summary'>Gets a value indicating whether the UDP handshake has been completed.</div>
+</div>
+<div class='member'>
+<div class='signature'>IPEndPoint <strong>RemoteEndPoint</strong> { get; set; }</div>
+<div class='summary'>Gets the remote UDP endpoint for this vessel.</div>
+</div>
+<h2>Methods</h2>
+<div class='member'>
+<div class='signature'>Void <strong>CompleteHandshake</strong>(IPEndPoint clientEndpoint)</div>
+<div class='summary'>Completes the UDP handshake by storing the client's endpoint.</div>
+</div>
+<div class='member'>
+<div class='signature'>Void <strong>Dispose</strong>()</div>
+<div class='summary'>Releases the resources used by this UDP I/O handler.</div>
+</div>
+<div class='member'>
+<div class='signature'>Void <strong>Initialize</strong>(UdpClient sharedSocket)</div>
+<div class='summary'>Initializes the shared UDP socket for all vessels.</div>
+</div>
+<div class='member'>
+<div class='signature'>Boolean <strong>IsTimedOut</strong>(Int32 timeoutSeconds)</div>
+<div class='summary'>Checks if this vessel's UDP connection has timed out.</div>
+</div>
+<div class='member'>
+<div class='signature'>Void <strong>OnPacketReceived</strong>(Byte[] packet)</div>
+<div class='summary'>Handles an incoming UDP packet received for this vessel.</div>
+</div>
+<div class='member'>
+<div class='signature'>Task <strong>SendAsync</strong>(Byte[] data)</div>
+<div class='summary'>Sends a UDP packet to this vessel's remote endpoint.</div>
+</div>
+<div class='member'>
+<div class='signature'>Task <strong>SendTextAsync</strong>(String message)</div>
+<div class='summary'>Sends a text message as a UDP packet.</div>
+</div>
+</body></html>

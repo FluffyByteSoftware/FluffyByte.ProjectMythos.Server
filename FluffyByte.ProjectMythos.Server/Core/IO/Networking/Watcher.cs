@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
 using FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient;
 using FluffyByte.ProjectMythos.Server.FluffyTypes;
@@ -18,283 +19,81 @@ namespace FluffyByte.ProjectMythos.Server.Core.IO.Networking;
 /// </remarks>
 public class Watcher(Sentinel parentSentinel)
 {
-    private readonly Sentinel _sentinelParentReference = parentSentinel;
-
-    // State tracking collections
-    private readonly ThreadSafeDictionary<int, Vessel> _allVessels = [];
+    private readonly Sentinel _parentReference = parentSentinel;
 
     /// <summary>
-    /// Raw TCP clients that haven't been upgraded to Vessels yet.
+    /// Represents a thread-safe collection of <see cref="Vessel"/> objects.
     /// </summary>
-    public ThreadSafeList<TcpClient> PendingTcpClients { get; private set; } = [];
+    /// <remarks>This collection ensures thread safety for concurrent access and modifications.  It is
+    /// suitable for scenarios where multiple threads need to add, remove, or enumerate vessels  without requiring
+    /// external synchronization.</remarks>
+    public ThreadSafeList<Vessel> Vessels = [];
+    /// <summary>
+    /// Represents a thread-safe collection of <see cref="TcpClient"/> objects.
+    /// </summary>
+    /// <remarks>This collection ensures thread-safe access and modification of the underlying list of <see
+    /// cref="TcpClient"/> instances. It is suitable for scenarios where multiple threads need to concurrently add,
+    /// remove, or enumerate TCP clients.</remarks>
+    public ThreadSafeList<TcpClient> RawTcpClients = [];
 
     /// <summary>
-    /// Gets the total number of vessels (both authenticated and unauthenticated).
+    /// Clears the current cache of users connected at various stages.
     /// </summary>
-    public int TotalVessels => _allVessels.Count;
-
-    /// <summary>
-    /// Gets the number of pending TCP clients that haven't been upgraded yet.
-    /// </summary>
-    public int PendingTcpCount => PendingTcpClients.Count;
-
-    #region Registration Methods
-
-    /// <summary>
-    /// Registers a raw TCP client that just connected.
-    /// This adds it to the pending list until it can be upgraded to a Vessel.
-    /// </summary>
-    public void RegisterTcpClient(TcpClient tcpClient)
+    internal void ClearLists()
     {
-        try
-        {
-            PendingTcpClients.Add(tcpClient);
-            Scribe.Debug($"[Watcher] Registered raw TCP client. Pending: {PendingTcpCount}");
-        }
-        catch (Exception ex)
-        {
-            Scribe.Error(ex);
-        }
+        Vessels.Clear();
+        RawTcpClients.Clear();
     }
 
     /// <summary>
-    /// Upgrades a pending TCP client to a Vessel (wraps it with connection ID and streams).
-    /// Returns the assigned connection ID, or -1 on failure.
+    /// Registers a new vessel and adds it to the collection of tracked vessels.
     /// </summary>
-    public int UpgradeToVessel(TcpClient tcpClient, Vessel newVessel)
+    /// <remarks>This method adds the specified vessel to the internal collection and logs the registration 
+    /// for debugging purposes. Ensure the vessel is not already registered to avoid duplicates.</remarks>
+    /// <param name="vessel">The vessel to register. Cannot be <see langword="null"/>.</param>
+    public void RegisterVessel(Vessel vessel)
     {
-        try
-        {
-            PendingTcpClients.Remove(tcpClient);
-
-            _allVessels.Add(newVessel.Id, newVessel);
-
-            Scribe.Debug($"[Watcher] Upgraded TCP client to Vessel {newVessel.Id}. " +
-                       $"Total vessels: {TotalVessels}, Pending: {PendingTcpCount}");
-
-            return newVessel.Id;
-        }
-        catch (Exception ex)
-        {
-            Scribe.Error(ex);
-            return -1;
-        }
+        Vessels.Add(vessel);
+        Scribe.Debug($"[Watcher] Registered Vessel {vessel.Id} (Total Vessels: {Vessels.Count})");
     }
 
     /// <summary>
-    /// Marks a vessel as authenticated after UDP handshake completes.
-    /// This means the vessel now has BOTH TCP and UDP connections established.
+    /// Unregisters the specified vessel from the collection of tracked vessels.
     /// </summary>
-    public bool AuthenticateVessel(int connectionId)
+    /// <remarks>Removes the specified vessel from the internal collection of tracked vessels.  After this
+    /// method is called, the vessel will no longer be monitored.</remarks>
+    /// <param name="vessel">The vessel to be unregistered. Cannot be <see langword="null"/>.</param>
+    public void UnregisterVessel(Vessel vessel)
     {
-        try
-        {
-            Vessel? upgradeableVessel = GetVessel(connectionId);
+        Vessels.Remove(vessel);
+        Scribe.Debug($"[Watcher] Unregistered Vessel {vessel.Id} (Total Vessels: {Vessels.Count})");
 
-            if (upgradeableVessel == null)
-            {
-                Scribe.Warn($"[Watcher] Cannot authenticate - vessel {connectionId} not found");
-                return false;
-            }
 
-            if (upgradeableVessel.IsAuthenticated)
-            {
-                Scribe.Warn($"[Watcher] Vessel {connectionId} is already authenticated");
-                return false;
-            }
-
-            upgradeableVessel.IsAuthenticated = true;
-            Scribe.Debug($"[Watcher] Vessel {connectionId} authenticated (UDP handshake complete)");
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Scribe.Error(ex);
-            return false;
-        }
     }
 
-    #endregion
-
-    #region Unregistration Methods
 
     /// <summary>
-    /// Removes a raw TCP client from pending list without creating a vessel.
-    /// Used when a connection is rejected before upgrade.
+    /// Registers a raw <see cref="TcpClient"/> for monitoring and management.
     /// </summary>
-    public void UnregisterTcpClient(TcpClient tcpClient)
+    /// <remarks>This method adds the specified <see cref="TcpClient"/> to the internal collection of raw TCP
+    /// clients  and logs the registration for debugging purposes. The caller is responsible for ensuring the  <see
+    /// cref="TcpClient"/> is properly initialized before calling this method.</remarks>
+    /// <param name="tcpClient">The <see cref="TcpClient"/> instance to register. Must not be <c>null</c>.</param>
+    public void RegisterRawTcpClient(TcpClient tcpClient)
     {
-        try
-        {
-            PendingTcpClients.Remove(tcpClient);
-            tcpClient.Close();
-            Scribe.Debug($"[Watcher] Unregistered raw TCP client. Pending: {PendingTcpCount}");
-        }
-        catch (Exception ex)
-        {
-            Scribe.Error(ex);
-        }
+        RawTcpClients.Add(tcpClient);
+        Scribe.Debug($"[Watcher] Registered Raw TcpClient {tcpClient.Client.RemoteEndPoint} (Total Raw TcpClients: {RawTcpClients.Count})");
     }
 
     /// <summary>
-    /// Unregisters a vessel by connection ID and cleans up resources.
+    /// Unregisters a raw TCP client from the collection of active clients.
     /// </summary>
-    public void UnregisterVessel(int connectionId)
+    /// <remarks>This method removes the specified TCP client from the internal collection of raw TCP clients.
+    /// It is typically used to manage and track active client connections.</remarks>
+    /// <param name="tcpClient">The <see cref="TcpClient"/> instance to unregister.</param>
+    public void UnregisterRawTcpClient(TcpClient tcpClient)
     {
-        try
-        {
-            if (_allVessels.Remove(connectionId, out Vessel? vessel))
-            {
-                if(vessel == null)
-                {
-                    Scribe.Error($"[Watcher] Vessel {connectionId} was null during unregistration. THROWING.");
-                    throw new NullReferenceException(nameof(vessel));
-                }
-
-                vessel.Disconnect();
-                Scribe.Debug($"[Watcher] Unregistered vessel {connectionId}. Total vessels: {TotalVessels}");
-            }
-            else
-            {
-                Scribe.Warn($"[Watcher] Attempted to unregister non-existent vessel {connectionId}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Scribe.NetworkError(ex);
-        }
+        RawTcpClients.Add(tcpClient);
+        Scribe.Debug($"[Watcher] Unregistered Raw TcpClient {tcpClient.Client.RemoteEndPoint} (Total Raw TcpClients: {RawTcpClients.Count})");
     }
-
-    /// <summary>
-    /// Removes all vessels that are marked as disconnecting.
-    /// Returns the number of vessels cleaned up.
-    /// </summary>
-    public int CleanupDisconnectedVessels()
-    {
-        try
-        {
-            var disconnecting = GetDisconnectingVessels();
-
-            foreach (var vessel in disconnecting)
-            {
-                _allVessels.Remove(vessel.Id);
-            }
-
-            if (disconnecting.Count > 0)
-            {
-                Scribe.Debug($"[Watcher] Cleaned up {disconnecting.Count} disconnected vessels");
-            }
-
-            return disconnecting.Count;
-        }
-        catch (Exception ex)
-        {
-            Scribe.Error(ex);
-            return 0;
-        }
-    }
-
-    /// <summary>
-    /// Unregisters ALL connections and cleans up resources.
-    /// Called during server shutdown.
-    /// </summary>
-    public void UnregisterAll()
-    {
-        try
-        {
-            int vesselCount = TotalVessels;
-            int pendingCount = PendingTcpCount;
-
-            // Disconnect all vessels
-            _allVessels.ForEach((id, vessel) =>
-            {
-                try
-                {
-                    vessel.Disconnect();
-                }
-                catch (Exception ex)
-                {
-                    Scribe.NetworkError(ex);
-                }
-            });
-
-            // Close all pending TCP clients
-            PendingTcpClients.ForEach(client =>
-            {
-                try
-                {
-                    client.Close();
-                }
-                catch (Exception ex)
-                {
-                    Scribe.NetworkError(ex);
-                }
-            });
-
-            // Clear collections
-            _allVessels.Clear();
-            PendingTcpClients.Clear();
-
-            Scribe.Debug($"[Watcher] Unregistered all connections " +
-                       $"({vesselCount} vessels, {pendingCount} pending)");
-        }
-        catch (Exception ex)
-        {
-            Scribe.Error(ex);
-        }
-    }
-
-    #endregion
-
-    #region Query Methods
-
-    /// <summary>
-    /// Gets a vessel by its connection ID.
-    /// </summary>
-    public Vessel? GetVessel(int connectionId)
-    {
-        return _allVessels.GetValueOrDefault(connectionId);
-    }
-
-    /// <summary>
-    /// Gets all vessels regardless of authentication state.
-    /// </summary>
-    public List<Vessel> GetAllVessels()
-    {
-        return [.. _allVessels.Values];
-    }
-
-    /// <summary>
-    /// Gets all vessels that have NOT completed UDP handshake (TCP-only).
-    /// </summary>
-    public List<Vessel> GetUnauthenticatedVessels()
-    {
-        return [.. _allVessels.WhereValue(v => !v.IsAuthenticated).Values];
-    }
-
-    /// <summary>
-    /// Gets all vessels that HAVE completed UDP handshake (TCP+UDP).
-    /// </summary>
-    public List<Vessel> GetAuthenticatedVessels()
-    {
-        return [.. _allVessels.WhereValue(v => v.IsAuthenticated).Values];
-    }
-
-    /// <summary>
-    /// Gets all vessels that are currently disconnecting.
-    /// </summary>
-    public List<Vessel> GetDisconnectingVessels()
-    {
-        return [.. _allVessels.WhereValue(v => v.Disconnecting).Values];
-    }
-
-    /// <summary>
-    /// Checks if a connection ID is currently active.
-    /// </summary>
-    public bool IsVesselActive(int connectionId)
-    {
-        return _allVessels.ContainsKey(connectionId);
-    }
-    #endregion
 }

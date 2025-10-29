@@ -130,7 +130,7 @@ public class Prophet
         html.AppendLine($"<h1>{GetTypeKind(type)} {type.Name}</h1>");
         html.AppendLine($"<div class='namespace'>Namespace: {type.Namespace ?? "(global)"}</div>");
 
-        var summary = GetSummary(type);
+        string? summary = GetSummary(type);
 
         if (!string.IsNullOrWhiteSpace(summary))
         {

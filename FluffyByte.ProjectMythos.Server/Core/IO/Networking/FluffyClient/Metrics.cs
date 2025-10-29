@@ -34,6 +34,11 @@ public class Metrics(Vessel parentVessel) : IDisposable
     public DateTime LoginTime { get; private set; }
 
     /// <summary>
+    /// Gets the timestamp of the most recent UDP packet received.
+    /// </summary>
+    public DateTime LastPacketUdpReceivedTime { get; internal set; } = DateTime.UtcNow;
+
+    /// <summary>
     /// Gets the total number of bytes received by the Vessel.
     /// </summary>
     public ulong TotalBytesReceived { get; internal set; } = 0;
@@ -72,7 +77,7 @@ public class Metrics(Vessel parentVessel) : IDisposable
         }
         catch(Exception ex)
         {
-            Scribe.NetworkError(ex);
+            Scribe.NetworkError(ex, _parentVesselReference);
             return false;
         }
     }

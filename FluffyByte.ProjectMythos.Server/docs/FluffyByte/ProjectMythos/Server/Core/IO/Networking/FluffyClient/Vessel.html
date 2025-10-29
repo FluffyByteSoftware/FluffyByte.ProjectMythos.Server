@@ -1,0 +1,90 @@
+<!DOCTYPE html><html><head>
+<meta charset='utf-8'>
+<title>Vessel</title>
+<style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; line-height: 1.6; max-width: 1200px; }
+            .header { margin-bottom: 20px; }
+            .header a { text-decoration: none; color: #0066cc; }
+            h1 { color: #333; border-bottom: 2px solid #0066cc; padding-bottom: 10px; }
+            h2 { color: #555; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+            .namespace { color: #666; font-size: 0.9em; margin-bottom: 20px; }
+            .type-summary { background: #f0f8ff; padding: 15px; border-left: 4px solid #0066cc; margin: 20px 0; }
+            .relationships { background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0; }
+            .relationships div { margin: 5px 0; }
+            .member { margin: 15px 0; padding: 15px; background: #fafafa; border-radius: 5px; }
+            .signature { font-family: 'Courier New', monospace; color: #333; margin-bottom: 8px; }
+            .signature strong { color: #0066cc; }
+            .summary { color: #555; font-size: 0.95em; margin-top: 8px; }
+            .type-kind { display: inline-block; background: #e0e0e0; padding: 2px 8px; border-radius: 3px; font-size: 0.85em; margin-right: 5px; }
+            a { color: #0066cc; text-decoration: none; }
+            a:hover { text-decoration: underline; }
+            ul { list-style-type: none; padding-left: 0; }
+            li { margin: 10px 0; padding: 10px; background: #fafafa; border-radius: 3px; }
+            </style>
+</head><body>
+<div class='header'><a href='../../../../../../../index.html'>← Back to Index</a></div>
+<h1>class Vessel</h1>
+<div class='namespace'>Namespace: FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient</div>
+<div class='type-summary'>Represents a vessel class which wraps around a TcpClient and UdpClient for managing a network connection.</div>
+<h2>Relationships</h2>
+<div class='relationships'>
+<div><strong>Implements:</strong> 
+IDisposable
+</div>
+</div>
+<h2>Constructors</h2>
+<div class='member'>
+<div class='signature'><strong>Vessel</strong>(TcpClient tcpClient, IPEndPoint udpEndPoint, UdpClient sharedUdpSocket)</div>
+<div class='summary'>Represents a vessel class which wraps around a TcpClient and UdpClient for managing a network connection.</div>
+</div>
+<h2>Properties</h2>
+<div class='member'>
+<div class='signature'>Boolean <strong>Disconnecting</strong> { get; }</div>
+<div class='summary'>Gets a value indicating whether the system is in the process of disconnecting.</div>
+</div>
+<div class='member'>
+<div class='signature'>Guid <strong>Guid</strong> { get; set; }</div>
+<div class='summary'>Gets the unique identifier for this instance (used for TCP/UDP linking).</div>
+</div>
+<div class='member'>
+<div class='signature'>Int32 <strong>Id</strong> { get; set; }</div>
+<div class='summary'>Gets the simple client identifier for the instance.</div>
+</div>
+<div class='member'>
+<div class='signature'>Metrics <strong>Metrics</strong> { get; }</div>
+<div class='summary'>Gets an object that provides access to various metrics related to the system's performance and behavior.</div>
+</div>
+<div class='member'>
+<div class='signature'>String <strong>Name</strong> { get; set; }</div>
+<div class='summary'>Represents the name of the vessel (set during authentication).</div>
+</div>
+<div class='member'>
+<div class='signature'>TcpIO <strong>TcpIO</strong> { get; }</div>
+<div class='summary'>The TcpIO instance handles TCP input/output operations for this vessel.</div>
+</div>
+<div class='member'>
+<div class='signature'>UdpClient <strong>UdpClient</strong> { get; set; }</div>
+<div class='summary'>Gets the  instance used for sending and receiving UDP datagrams.</div>
+</div>
+<div class='member'>
+<div class='signature'>IPEndPoint <strong>UdpEndPoint</strong> { get; set; }</div>
+<div class='summary'>Gets the UDP endpoint used for network communication.</div>
+</div>
+<div class='member'>
+<div class='signature'>UdpIO <strong>UdpIO</strong> { get; }</div>
+<div class='summary'>Gets an instance of the  class associated with this object.</div>
+</div>
+<h2>Methods</h2>
+<div class='member'>
+<div class='signature'>Void <strong>Disconnect</strong>()</div>
+<div class='summary'>Disconnects the current instance from its associated watcher and performs necessary cleanup.</div>
+</div>
+<div class='member'>
+<div class='signature'>Task <strong>DisconnectAsync</strong>()</div>
+<div class='summary'>Disconnects the current connection, ensuring that the operation is performed only once.</div>
+</div>
+<div class='member'>
+<div class='signature'>Void <strong>Dispose</strong>()</div>
+<div class='summary'>Releases the resources used by the current instance of the class.</div>
+</div>
+</body></html>

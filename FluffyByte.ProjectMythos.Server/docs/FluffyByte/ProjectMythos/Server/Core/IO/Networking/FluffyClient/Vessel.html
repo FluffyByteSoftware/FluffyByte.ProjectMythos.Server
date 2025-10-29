@@ -35,7 +35,7 @@ IDisposable
 <h2>Constructors</h2>
 <div class='member'>
 <div class='signature'><strong>Vessel</strong>(TcpClient tcpClient, IPEndPoint udpEndPoint, UdpClient sharedUdpSocket)</div>
-<div class='summary'>Represents a vessel class which wraps around a TcpClient and UdpClient for managing a network connection.</div>
+<div class='summary'>Initializes a new instance of the Vessel class.</div>
 </div>
 <h2>Properties</h2>
 <div class='member'>
@@ -51,15 +51,15 @@ IDisposable
 <div class='summary'>Gets the simple client identifier for the instance.</div>
 </div>
 <div class='member'>
-<div class='signature'>Metrics <strong>Metrics</strong> { get; }</div>
-<div class='summary'>Gets an object that provides access to various metrics related to the system's performance and behavior.</div>
+<div class='signature'>Metrics <strong>Metrics</strong> { get; set; }</div>
+<div class='summary'>Gets the Metrics instance for tracking connection statistics.</div>
 </div>
 <div class='member'>
 <div class='signature'>String <strong>Name</strong> { get; set; }</div>
 <div class='summary'>Represents the name of the vessel (set during authentication).</div>
 </div>
 <div class='member'>
-<div class='signature'>TcpIO <strong>TcpIO</strong> { get; }</div>
+<div class='signature'>TcpIO <strong>TcpIO</strong> { get; set; }</div>
 <div class='summary'>The TcpIO instance handles TCP input/output operations for this vessel.</div>
 </div>
 <div class='member'>
@@ -71,8 +71,8 @@ IDisposable
 <div class='summary'>Gets the UDP endpoint used for network communication.</div>
 </div>
 <div class='member'>
-<div class='signature'>UdpIO <strong>UdpIO</strong> { get; }</div>
-<div class='summary'>Gets an instance of the  class associated with this object.</div>
+<div class='signature'>UdpIO <strong>UdpIO</strong> { get; set; }</div>
+<div class='summary'>Gets the UdpIO instance associated with this vessel.</div>
 </div>
 <h2>Methods</h2>
 <div class='member'>

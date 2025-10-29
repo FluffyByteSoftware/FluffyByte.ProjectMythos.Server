@@ -157,7 +157,6 @@ public class Sentinel : CoreProcessBase
             }
         }
     }
-
     /// <summary>
     /// Performs the TCP/UDP handshake and creates a fully-connected Vessel once complete.
     /// </summary>
@@ -199,7 +198,16 @@ public class Sentinel : CoreProcessBase
 
             Scribe.Info($"[{Name}] Vessel {newVessel.Id} fully connected (TCP + UDP)");
 
-            // Send welcome message
+            bool authenticated = await GateKeeper.AuthenticateVesselAsync(newVessel);
+
+            if (!authenticated)
+            {
+                Scribe.Warn($"[{Name}] Vessel {newVessel.Id} failed authentication. Disconnecting.");
+                Watcher.UnregisterVessel(newVessel);
+                return;
+            }
+
+            // ✅ NOW send welcome message (after authentication succeeds)
             await newVessel.TcpIO.WriteTextAsync("Connection established. Welcome to FluffyByte.OPUL!");
 
             // Start handling TCP communication
@@ -281,6 +289,10 @@ public class Sentinel : CoreProcessBase
                     RouteUdpPacket(result.Buffer, result.RemoteEndPoint);
                 }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            Scribe.Warn($"[{Name}] UDP Listener canceled (shutdown requested)");
         }
         catch (Exception ex)
         {

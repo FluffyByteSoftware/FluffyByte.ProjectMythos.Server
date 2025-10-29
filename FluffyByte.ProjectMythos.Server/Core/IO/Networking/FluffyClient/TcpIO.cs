@@ -162,55 +162,51 @@ public class TcpIO : IDisposable
             return null;
         }
     }
-
     /// <summary>
     /// Writes binary data to the underlying TCP stream with a length prefix.
     /// </summary>
-    /// <remarks>This method writes the length of the binary data as a 4-byte prefix, followed by the data
-    /// itself, to the TCP stream. If the provided data is null, empty, or exceeds the maximum allowed size, the
-    /// operation is ignored, and a warning is logged. If an error occurs during the write operation, the connection is
-    /// terminated, and the error is logged.</remarks>
-    /// <param name="dataToWrite">The binary data to write. Must not be null, empty, or exceed the maximum allowed size.</param>
-    public void WriteBinary(byte[] dataToWrite)
+    public async Task WriteBinaryAsync(byte[] dataToWrite)
     {
         if (_vesselParentReference.Disconnecting)
             return;
 
-        if(dataToWrite == null || dataToWrite.Length == 0)
+        if (dataToWrite == null || dataToWrite.Length == 0)
         {
             Scribe.Warn($"[Vessel {_vesselParentReference.Name}] Attempted to write null or empty binary data. Ignoring.");
-            return; 
+            return;
         }
 
-        if(dataToWrite.Length > MAX_BINARY_SIZE)
+        if (dataToWrite.Length > MAX_BINARY_SIZE)
         {
             Scribe.Warn($"[Vessel {_vesselParentReference.Name}] Attempted to write excessive binary length of {dataToWrite.Length}. " +
                 $"Maximum Size: {MAX_BINARY_SIZE}. Disconnecting.");
+            _vesselParentReference.Disconnect();
+            return;
         }
 
         try
         {
             // Write length prefix (4 bytes)
-            _tcpBinWriter.Write(dataToWrite.Length);
+            byte[] lengthBytes = BitConverter.GetBytes(dataToWrite.Length);
+            await _vesselParentReference._tcpStream.WriteAsync(lengthBytes.AsMemory(0, 4));
 
             // Write actual data
-            _tcpBinWriter.Write(dataToWrite);
+            await _vesselParentReference._tcpStream.WriteAsync(dataToWrite);
 
-            // Flush synchronously
-            _tcpBinWriter.Flush();
-            
-            _vesselParentReference._tcpStream.Flush();
+            // Flush the stream
+            await _vesselParentReference._tcpStream.FlushAsync();
 
             _vesselParentReference.Metrics.TotalBytesSent += (ulong)(4 + dataToWrite.Length);
 
             Scribe.Debug($"[Vessel {_vesselParentReference.Name}] Sent {dataToWrite.Length} bytes of binary data.");
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Scribe.NetworkError(ex, _vesselParentReference);
             _vesselParentReference.Disconnect();
         }
     }
+
 
     /// <summary>
     /// Releases the resources used by the current instance of the class.

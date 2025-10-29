@@ -12,7 +12,7 @@ namespace FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient;
 /// <summary>
 /// Represents a vessel class which wraps around a TcpClient and UdpClient for managing a network connection.
 /// </summary>
-public class Vessel(TcpClient tcpClient, IPEndPoint udpEndPoint, UdpClient sharedUdpSocket) : IDisposable
+public class Vessel : IDisposable
 {
     private bool _disconnecting = false;
 
@@ -22,19 +22,12 @@ public class Vessel(TcpClient tcpClient, IPEndPoint udpEndPoint, UdpClient share
     public bool Disconnecting => _disconnecting;
 
     /// <summary>
-    /// Indicates whether the user has completed the full TCP/UDP handshake.
+    /// Indicates whether the user has completed the full TCP/UDP handshake and authentication.
     /// </summary>
-    /// <remarks>
-    /// This becomes true after:
-    /// 1. TCP connection established
-    /// 2. Server sent handshake with ClientID and UDP info
-    /// 3. Client sent first UDP packet with ClientID
-    /// 4. Server matched UDP endpoint to this Vessel
-    /// </remarks>
     public bool IsAuthenticated = false;
 
-    internal readonly TcpClient _tcpClient = tcpClient;
-    internal readonly NetworkStream _tcpStream = tcpClient.GetStream();
+    internal readonly TcpClient _tcpClient;
+    internal readonly NetworkStream _tcpStream;
 
     private static int _id = 0;
     /// <summary>
@@ -45,12 +38,12 @@ public class Vessel(TcpClient tcpClient, IPEndPoint udpEndPoint, UdpClient share
     /// <summary>
     /// Gets the <see cref="UdpClient"/> instance used for sending and receiving UDP datagrams.
     /// </summary>
-    public UdpClient UdpClient { get; internal set; } = sharedUdpSocket;
+    public UdpClient UdpClient { get; internal set; }
 
     /// <summary>
     /// Gets the UDP endpoint used for network communication.
     /// </summary>
-    public IPEndPoint UdpEndPoint { get; internal set; } = udpEndPoint;
+    public IPEndPoint UdpEndPoint { get; internal set; }
 
     /// <summary>
     /// Gets the unique identifier for this instance (used for TCP/UDP linking).
@@ -65,16 +58,33 @@ public class Vessel(TcpClient tcpClient, IPEndPoint udpEndPoint, UdpClient share
     /// <summary>
     /// The TcpIO instance handles TCP input/output operations for this vessel.
     /// </summary>
-    public TcpIO TcpIO => new(this);
+    public TcpIO TcpIO { get; private set; }
 
     /// <summary>
-    /// Gets an instance of the <see cref="UdpIO"/> class associated with this object.
+    /// Gets the UdpIO instance associated with this vessel.
     /// </summary>
-    public UdpIO UdpIO => new(this);
+    public UdpIO UdpIO { get; private set; }
+
     /// <summary>
-    /// Gets an object that provides access to various metrics related to the system's performance and behavior.
+    /// Gets the Metrics instance for tracking connection statistics.
     /// </summary>
-    public Metrics Metrics => new(this);
+    public Metrics Metrics { get; private set; }
+
+    /// <summary>
+    /// Initializes a new instance of the Vessel class.
+    /// </summary>
+    public Vessel(TcpClient tcpClient, IPEndPoint udpEndPoint, UdpClient sharedUdpSocket)
+    {
+        _tcpClient = tcpClient;
+        _tcpStream = tcpClient.GetStream();
+        UdpClient = sharedUdpSocket;
+        UdpEndPoint = udpEndPoint;
+
+        // Initialize components once (not as properties that recreate every time)
+        TcpIO = new TcpIO(this);
+        UdpIO = new UdpIO(this);
+        Metrics = new Metrics(this);
+    }
 
     /// <summary>
     /// Disconnects the current connection, ensuring that the operation is performed only once.
@@ -85,9 +95,16 @@ public class Vessel(TcpClient tcpClient, IPEndPoint udpEndPoint, UdpClient share
 
         _disconnecting = true;
 
-        _tcpClient.Close();
+        try
+        {
+            _tcpClient.Close();
+            HandleDisconnect();
+        }
+        catch (Exception ex)
+        {
+            Scribe.Error(ex);
+        }
 
-        HandleDisconnect();
         await Task.CompletedTask;
     }
 
@@ -111,9 +128,17 @@ public class Vessel(TcpClient tcpClient, IPEndPoint udpEndPoint, UdpClient share
         if (!_disconnecting)
             return;
 
-        _tcpClient.Dispose();
-        Metrics.Dispose();
-        TcpIO.Dispose();
+        try
+        {
+            TcpIO?.Dispose();
+            UdpIO?.Dispose();
+            Metrics?.Dispose();
+            _tcpClient?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Scribe.Error(ex);
+        }
 
         GC.SuppressFinalize(this);
     }
@@ -128,6 +153,7 @@ public class Vessel(TcpClient tcpClient, IPEndPoint udpEndPoint, UdpClient share
             Conductor.Instance.Sentinel.Watcher.UnregisterVessel(this);
 
             _tcpClient.Close();
+            Dispose();
         }
         catch (Exception ex)
         {

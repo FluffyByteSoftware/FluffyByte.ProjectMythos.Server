@@ -93,7 +93,7 @@ public class Watcher(Sentinel parentSentinel)
     /// <param name="tcpClient">The <see cref="TcpClient"/> instance to unregister.</param>
     public void UnregisterRawTcpClient(TcpClient tcpClient)
     {
-        RawTcpClients.Add(tcpClient);
+        RawTcpClients.Remove(tcpClient);
         Scribe.Debug($"[Watcher] Unregistered Raw TcpClient {tcpClient.Client.RemoteEndPoint} (Total Raw TcpClients: {RawTcpClients.Count})");
     }
 }

@@ -90,6 +90,7 @@ public class UdpIO : IDisposable
         _vesselParentReference.Metrics.LastPacketUdpReceivedTime = DateTime.UtcNow;
 
         Scribe.Info($"[Vessel {_vesselParentReference.Name}] UDP handshake completed for {clientEndpoint}");
+        _vesselParentReference.Metrics.JustReacted();
     }
 
     /// <summary>
@@ -206,7 +207,8 @@ public class UdpIO : IDisposable
             _lastSequenceNumberReceived = sequenceNumber;
 
             Scribe.Debug($"[Vessel {_vesselParentReference.Name}] Received UDP packet (seq: {sequenceNumber}, size: {payload.Length} bytes)");
-
+            
+            _vesselParentReference.Metrics.JustReacted();
             // Process the payload (delegate to game logic)
             ProcessUdpPayload(payload);
         }

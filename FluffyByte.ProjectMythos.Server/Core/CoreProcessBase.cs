@@ -8,13 +8,14 @@ using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
 namespace FluffyByte.ProjectMythos.Server.Core;
 
 /// <summary>
-/// Represents the base class for core processes, providing a framework for managing process lifecycle operations such
-/// as starting and stopping.
+/// Provides a base class for implementing core processes with lifecycle management, including start and stop
+/// operations.
 /// </summary>
-/// <remarks>This abstract class defines the essential structure and behavior for core processes, including a
-/// unique identifier, a name, and lifecycle management methods. Derived classes must implement the <see cref="Name"/>,
-/// <see cref="RequestStartAsync(CancellationToken)"/>, and <see cref="RequestStopAsync"/> members.</remarks>
-/// <param name="shutdownToken"></param>
+/// <remarks>This abstract class defines the foundational structure for core processes, including properties for
+/// process state, unique identification, and lifecycle management. Derived classes must implement the <see
+/// cref="StartAsync"/> and <see cref="StopAsync"/> methods to define the specific behavior for starting and stopping
+/// the process.</remarks>
+/// <param name="shutdownToken">CancellationToken that is passed to the inner CoreProcessBase functionality</param>
 public abstract class CoreProcessBase(CancellationToken shutdownToken) : ICoreProcess
 {
     /// <summary>

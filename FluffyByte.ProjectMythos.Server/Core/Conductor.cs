@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
 using FluffyByte.ProjectMythos.Server.Core.IO.Networking;
+using FluffyByte.ProjectMythos.Server.Core.TickSystem;
 
 namespace FluffyByte.ProjectMythos.Server.Core;
 
@@ -39,6 +40,16 @@ public class Conductor
     public Watcher Watcher { get; private set; }
 
     /// <summary>
+    /// Gets the instance of the <see cref="Weaver"/> associated with this object.
+    /// </summary>
+    public Weaver Weaver { get; private set; }
+
+    /// <summary>
+    /// Gets the instance of the <see cref="Loom"/> associated with this object.
+    /// </summary>
+    public Loom Loom { get; private set; }
+
+    /// <summary>
     /// Gets the <see cref="CancellationToken"/> that is triggered when the application is shutting down.
     /// </summary>
     public CancellationToken ShutdownToken { get; private set; }
@@ -63,6 +74,10 @@ public class Conductor
 
         Watcher = Sentinel.Watcher;
 
+        Weaver = new(ShutdownToken);
+
+        Loom = new(ShutdownToken);
+
         _processList.Add(Sentinel);
     }
 
@@ -80,6 +95,10 @@ public class Conductor
 
         try
         {
+            Sentinel = new(ShutdownToken);
+            Weaver = new(ShutdownToken);
+            Loom = new(ShutdownToken);
+
             foreach(ICoreProcess process in _processList)
             {
                 await process.RequestStartAsync(ShutdownToken);

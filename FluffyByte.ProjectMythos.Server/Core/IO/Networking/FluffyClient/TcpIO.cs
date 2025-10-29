@@ -94,7 +94,11 @@ public class TcpIO : IDisposable
         try
         {
             string? response = await _tcpTextReader.ReadLineAsync();
+            
+            _vesselParentReference.Metrics.JustReacted();
+
             return response ?? string.Empty;
+
         }
         catch(Exception ex)
         {
@@ -126,6 +130,7 @@ public class TcpIO : IDisposable
             if (length <= 0)
             {
                 Scribe.Warn($"[Vessel {_vesselParentReference.Name}] Received invalid binary length of {length}. Disconnecting.");
+                
                 _vesselParentReference.Disconnect();
 
                 return null;
@@ -151,6 +156,8 @@ public class TcpIO : IDisposable
             _vesselParentReference.Metrics.TotalBytesReceived += (ulong)(4 + length);
 
             Scribe.Debug($"[Vessel {_vesselParentReference.Name}] Received {length} bytes of binary data.");
+            
+            _vesselParentReference.Metrics.JustReacted();
 
             return data;
         }

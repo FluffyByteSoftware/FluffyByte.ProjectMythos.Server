@@ -114,7 +114,8 @@ public static class Scribe
     /// Logs a debug-level message along with the caller's file path if debug mode is enabled.
     /// </summary>
     /// <param name="message">The debug message to log.</param>
-    /// <param name="callerFilePath">The file path of the source code that invoked this method. This parameter is automatically populated by the
+    /// <param name="callerFilePath">The file path of the source code that invoked this method. 
+    /// This parameter is automatically populated by the
     /// compiler and defaults to the caller's file path.</param>
     public static void Debug(string message, [CallerFilePath] string callerFilePath = "")
     { 
@@ -126,7 +127,8 @@ public static class Scribe
     /// Logs an informational message along with the file path of the caller.
     /// </summary>
     /// <param name="message">The informational message to log.</param>
-    /// <param name="callerFilePath">The full path of the source file that contains the caller. This parameter is automatically populated by the
+    /// <param name="callerFilePath">The full path of the source file that contains the caller. 
+    /// This parameter is automatically populated by the
     /// compiler and defaults to an empty string if not provided.</param>
     public static void Info(string message, [CallerFilePath] string callerFilePath = "")
         => InternalLog(LogLevel.Info, message, null, callerFilePath);
@@ -135,7 +137,8 @@ public static class Scribe
     /// Logs a warning message with optional caller file path information.
     /// </summary>
     /// <param name="message">The warning message to log. Cannot be null or empty.</param>
-    /// <param name="callerFilePath">The file path of the source code that invoked this method. This parameter is automatically populated by the
+    /// <param name="callerFilePath">The file path of the source code that invoked this method. 
+    /// This parameter is automatically populated by the
     /// compiler and should not typically be provided manually. Defaults to an empty string.</param>
     public static void Warn(string message, [CallerFilePath] string callerFilePath = "")
         => InternalLog(LogLevel.Warn, message, null, callerFilePath);
@@ -144,7 +147,8 @@ public static class Scribe
     /// Logs an error message with the specified content and the caller's file path.
     /// </summary>
     /// <param name="message">The error message to log. Cannot be null or empty.</param>
-    /// <param name="callerFilePath">The file path of the source code that invoked this method. This parameter is automatically populated by the
+    /// <param name="callerFilePath">The file path of the source code that invoked this method. 
+    /// This parameter is automatically populated by the
     /// compiler and should not be explicitly provided in most cases.</param>
     public static void Error(string message, [CallerFilePath] string callerFilePath = "")
         => InternalLog(LogLevel.Error, message, null, callerFilePath);
@@ -153,7 +157,8 @@ public static class Scribe
     /// Logs an error message along with the associated exception details.
     /// </summary>
     /// <param name="exception">The exception to log. Cannot be <see langword="null"/>.</param>
-    /// <param name="callerFilePath">The file path of the source code that invoked this method. This parameter is automatically populated by the
+    /// <param name="callerFilePath">The file path of the source code that invoked this method. 
+    /// This parameter is automatically populated by the
     /// compiler and should not be explicitly provided in most cases.</param>
     public static void Error(Exception exception, [CallerFilePath] string callerFilePath = "")
         => InternalLog(LogLevel.Error, exception.Message, exception, callerFilePath);
@@ -162,7 +167,8 @@ public static class Scribe
     /// Logs a critical message, typically used to indicate a failure that requires immediate attention.
     /// </summary>
     /// <param name="message">The critical message to log. This should describe the nature of the failure or issue.</param>
-    /// <param name="callerFilePath">The file path of the source code that invoked this method. This parameter is automatically populated by the
+    /// <param name="callerFilePath">The file path of the source code that invoked this method. 
+    /// This parameter is automatically populated by the
     /// compiler  and is optional. Defaults to an empty string if not provided.</param>
     public static void Critical(string message, [CallerFilePath] string callerFilePath = "")
         => InternalLog(LogLevel.Critical, message, null, callerFilePath);
@@ -171,7 +177,8 @@ public static class Scribe
     /// Logs a critical error message along with the exception details.
     /// </summary>
     /// <param name="exception">The exception to log. Cannot be <see langword="null"/>.</param>
-    /// <param name="callerFilePath">The file path of the source code file that invoked this method. This parameter is automatically populated by the
+    /// <param name="callerFilePath">The file path of the source code file that invoked this method. 
+    /// This parameter is automatically populated by the
     /// compiler.</param>
     public static void Critical(Exception exception, [CallerFilePath] string callerFilePath = "")
         => InternalLog(LogLevel.Critical, exception.Message, exception, callerFilePath);
@@ -187,8 +194,8 @@ public static class Scribe
     /// of type "Vessel", the method attempts to invoke its asynchronous disconnection logic.</remarks>
     /// <param name="exception">The exception that occurred. Must not be <see langword="null"/>.</param>
     /// <param name="caller">The object that triggered the exception, or <see langword="null"/> if unavailable.</param>
-    /// <param name="callerFilePath">The file path of the source code that invoked this method. This parameter is automatically populated by the
-    /// compiler.</param>
+    /// <param name="callerFilePath">The file path of the source code that invoked this method. 
+    /// This parameter is automatically populated by the compiler.</param>
     public static void NetworkError(Exception exception, object? caller, [CallerFilePath] string callerFilePath = "")
     {
         switch (exception)
@@ -225,17 +232,17 @@ public static class Scribe
     public static void ToggleDebugMode() { _debugMode = !_debugMode; }
 
     /// <summary>
-    /// Logs a message with the specified log level, including optional exception details and caller file information.
+    /// Logs a message with the specified log level, including optional exception details and caller information.
     /// </summary>
-    /// <remarks>This method formats the log entry with a timestamp, log level, and class name derived from
-    /// the caller's file path. For critical log levels, the application will terminate after logging the
-    /// message.</remarks>
-    /// <param name="level">The severity level of the log entry. Determines the log format and behavior.</param>
+    /// <remarks>This method formats and writes log entries to the console and other configured outputs. If
+    /// the log level is <see cref="LogLevel.Critical"/>, the application will terminate after logging the message. The
+    /// method ensures thread safety by locking during the write operation.</remarks>
+    /// <param name="level">The severity level of the log entry. Determines the log formatting and behavior.</param>
     /// <param name="message">The message to log. Cannot be null or empty.</param>
-    /// <param name="ex">An optional exception to include in the log. If provided, the exception details and inner exceptions (up to a
-    /// depth of 10) are logged.</param>
-    /// <param name="callerFilePath">The file path of the caller, used to determine the class name for the log entry. Typically supplied
-    /// automatically by the compiler.</param>
+    /// <param name="ex">An optional exception to include in the log entry. If provided, the exception details and stack trace are
+    /// logged.</param>
+    /// <param name="callerFilePath">The file path of the caller, used to determine the class name for the log entry. Automatically populated by the
+    /// compiler.</param>
     private static void InternalLog(LogLevel level, string message, Exception? ex, string callerFilePath)
     {
         if (IsInitialized is false)
@@ -300,7 +307,7 @@ public static class Scribe
 /// <summary>
 /// Writes a log message to the console with a color corresponding to the specified log level.
 /// </summary>
-/// <remarks>The console text color is set based on the <paramref name="level">: <list type="bullet">
+/// <remarks>The console text color is set based on the <paramref name="level">logLevel: <list type="bullet">
 /// <item><description><see cref="LogLevel.Debug"/>: Gray</description></item> <item><description><see
 /// cref="LogLevel.Info"/>: Green</description></item> <item><description><see cref="LogLevel.Warn"/>:
 /// Yellow</description></item> <item><description><see cref="LogLevel.Error"/>: Red</description></item>

@@ -13,9 +13,12 @@ namespace FluffyByte.ProjectMythos.Server.Core.IO.Networking
     /// functionality to start and stop the process asynchronously. It is designed to operate within a system that
     /// requires controlled shutdown behavior, utilizing a <see cref="CancellationToken"/> to handle cancellation
     /// requests.</remarks>
-    /// <param name="shutdownToken"></param>
+    /// <param name="shutdownToken">The shutdown token controlled by the conductor.</param>
     public class GateKeeper(CancellationToken shutdownToken) : CoreProcessBase(shutdownToken)
     {
+        /// <summary>
+        /// Gets the name of the current instance.
+        /// </summary>
         public override string Name => "GateKeeper";
         
         

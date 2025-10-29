@@ -41,12 +41,12 @@ public class TcpIO : IDisposable
     {
         _vesselParentReference = parent;
         
-        _tcpTextReader = new(_vesselParentReference._tcpStream, Encoding.UTF8, 
+        _tcpTextReader = new(_vesselParentReference.tcpStream, Encoding.UTF8, 
             detectEncodingFromByteOrderMarks: false);
-        _tcpTextWriter = new(parent._tcpStream, Encoding.UTF8) { AutoFlush = true };
+        _tcpTextWriter = new(parent.tcpStream, Encoding.UTF8) { AutoFlush = true };
 
-        _tcpBinReader = new(parent._tcpStream, Encoding.UTF8, true);
-        _tcpBinWriter = new(parent._tcpStream, Encoding.UTF8, true);
+        _tcpBinReader = new(parent.tcpStream, Encoding.UTF8, true);
+        _tcpBinWriter = new(parent.tcpStream, Encoding.UTF8, true);
     }
 
     /// <summary>
@@ -188,13 +188,13 @@ public class TcpIO : IDisposable
         {
             // Write length prefix (4 bytes)
             byte[] lengthBytes = BitConverter.GetBytes(dataToWrite.Length);
-            await _vesselParentReference._tcpStream.WriteAsync(lengthBytes.AsMemory(0, 4));
+            await _vesselParentReference.tcpStream.WriteAsync(lengthBytes.AsMemory(0, 4));
 
             // Write actual data
-            await _vesselParentReference._tcpStream.WriteAsync(dataToWrite);
+            await _vesselParentReference.tcpStream.WriteAsync(dataToWrite);
 
             // Flush the stream
-            await _vesselParentReference._tcpStream.FlushAsync();
+            await _vesselParentReference.tcpStream.FlushAsync();
 
             _vesselParentReference.Metrics.TotalBytesSent += (ulong)(4 + dataToWrite.Length);
 

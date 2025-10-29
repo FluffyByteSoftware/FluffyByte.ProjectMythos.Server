@@ -66,8 +66,8 @@ public class Metrics(Vessel parentVessel) : IDisposable
     {
         try
         {
-            if(_parentVesselReference._tcpClient.Client.Poll(1, SelectMode.SelectRead) &&
-                _parentVesselReference._tcpClient.Client.Available == 0)
+            if(_parentVesselReference.tcpClient.Client.Poll(1, SelectMode.SelectRead) &&
+                _parentVesselReference.tcpClient.Client.Available == 0)
                 return false;
             else
                 LastResponseTime = DateTime.Now;

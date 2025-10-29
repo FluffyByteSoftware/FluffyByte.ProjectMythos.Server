@@ -26,7 +26,7 @@ public static class SafetyVest
     /// <returns><see langword="true"/> if all network safety checks pass; otherwise, <see langword="false"/>.</returns>
     public static bool NetworkSafetyChecks(Vessel vesselParent)
     {
-        if(vesselParent._tcpStream == null)
+        if(vesselParent.tcpStream == null)
         {
             Scribe.Debug($"[SafetyVest] Vessel {vesselParent.Id} has a null TCP stream.");
             vesselParent.Disconnect();
@@ -34,7 +34,7 @@ public static class SafetyVest
             return false;
         }
 
-        if(vesselParent._tcpStream.CanRead == false || vesselParent._tcpStream.CanWrite == false)
+        if(vesselParent.tcpStream.CanRead == false || vesselParent.tcpStream.CanWrite == false)
         {
             Scribe.Debug($"[SafetyVest] Vessel {vesselParent.Id} has an unreadable or unwritable TCP stream.");
             vesselParent.Disconnect();

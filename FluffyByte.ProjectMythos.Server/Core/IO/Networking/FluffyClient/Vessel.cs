@@ -26,8 +26,8 @@ public class Vessel : IDisposable
     /// </summary>
     public bool IsAuthenticated = false;
 
-    internal readonly TcpClient _tcpClient;
-    internal readonly NetworkStream _tcpStream;
+    internal readonly TcpClient tcpClient;
+    internal readonly NetworkStream tcpStream;
 
     private static int _id = 0;
     /// <summary>
@@ -75,8 +75,8 @@ public class Vessel : IDisposable
     /// </summary>
     public Vessel(TcpClient tcpClient, IPEndPoint udpEndPoint, UdpClient sharedUdpSocket)
     {
-        _tcpClient = tcpClient;
-        _tcpStream = tcpClient.GetStream();
+        this.tcpClient = tcpClient;
+        tcpStream = tcpClient.GetStream();
         UdpClient = sharedUdpSocket;
         UdpEndPoint = udpEndPoint;
 
@@ -97,7 +97,7 @@ public class Vessel : IDisposable
 
         try
         {
-            _tcpClient.Close();
+            tcpClient.Close();
             HandleDisconnect();
         }
         catch (Exception ex)
@@ -133,7 +133,7 @@ public class Vessel : IDisposable
             TcpIO?.Dispose();
             UdpIO?.Dispose();
             Metrics?.Dispose();
-            _tcpClient?.Dispose();
+            tcpClient?.Dispose();
         }
         catch (Exception ex)
         {
@@ -152,7 +152,7 @@ public class Vessel : IDisposable
         {
             Conductor.Instance.Sentinel.Watcher.UnregisterVessel(this);
 
-            _tcpClient.Close();
+            tcpClient.Close();
             Dispose();
         }
         catch (Exception ex)

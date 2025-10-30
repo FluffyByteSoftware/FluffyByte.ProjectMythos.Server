@@ -157,13 +157,16 @@ public class UdpIO : IDisposable
         await SendAsync(data);
     }
 
+ 
     /// <summary>
-    /// Handles an incoming UDP packet received for this vessel.
+    /// Handles the receipt of a UDP packet, performing validation, sequence tracking, and payload processing.
     /// </summary>
-    /// <remarks>This method is called by the Sentinel when a UDP packet is routed to this vessel.
-    /// It extracts the sequence number, validates the packet, and updates metrics and timing information.
-    /// Game logic should process the payload after this method completes validation.</remarks>
-    /// <param name="packet">The complete UDP packet including sequence number prefix.</param>
+    /// <remarks>This method validates the packet for minimum size and ensures it is not a duplicate or
+    /// out-of-order based on the sequence number. If the packet is valid, it updates metrics, detects packet loss, and
+    /// processes the payload. Malformed packets, duplicate packets, or packets received out of order are
+    /// ignored.</remarks>
+    /// <param name="packet">The received UDP packet as a byte array. The first 4 bytes represent the sequence number, and the remaining
+    /// bytes represent the payload.</param>
     public void OnPacketReceived(byte[] packet)
     {
         if (_vesselParentReference.Disconnecting)
@@ -188,25 +191,39 @@ public class UdpIO : IDisposable
             _vesselParentReference.Metrics.LastPacketUdpReceivedTime = DateTime.UtcNow;
             _vesselParentReference.Metrics.TotalBytesReceived += (ulong)packet.Length;
 
-            // Check for duplicate or out-of-order packets
-            if (sequenceNumber <= _lastSequenceNumberReceived)
+            // ✅ WRAPAROUND-SAFE: Check for duplicate or out-of-order packets
+            if (!IsSequenceNewer(sequenceNumber, _lastSequenceNumberReceived))
             {
-                Scribe.Debug($"[Vessel {_vesselParentReference.Name}] Received duplicate/old UDP packet (seq: {sequenceNumber}, expected > {_lastSequenceNumberReceived}). Ignoring.");
+                Scribe.Debug($"[Vessel {_vesselParentReference.Name}] Received duplicate/old UDP packet (seq: {sequenceNumber}, last: {_lastSequenceNumberReceived}). Ignoring.");
                 return;
             }
 
-            // Check for packet loss (gap in sequence numbers)
-            if (sequenceNumber > _lastSequenceNumberReceived + 1)
+            // ✅ WRAPAROUND-SAFE: Check for packet loss (gap in sequence numbers)
+            uint expectedNext = _lastSequenceNumberReceived + 1;
+            if (sequenceNumber != expectedNext)
             {
-                uint packetsLost = sequenceNumber - _lastSequenceNumberReceived - 1;
-                Scribe.Debug($"[Vessel {_vesselParentReference.Name}] Detected {packetsLost} lost UDP packet(s) between {_lastSequenceNumberReceived} and {sequenceNumber}.");
+                // Calculate packets lost (handles wraparound)
+                uint packetsLost;
+                if (sequenceNumber > _lastSequenceNumberReceived)
+                {
+                    // Normal case: no wraparound
+                    packetsLost = sequenceNumber - _lastSequenceNumberReceived - 1;
+                }
+                else
+                {
+                    // Wraparound case: sequence wrapped from max to 0
+                    packetsLost = (uint.MaxValue - _lastSequenceNumberReceived) + sequenceNumber;
+                }
+
+                Scribe.Debug($"[Vessel {_vesselParentReference.Name}] Detected {packetsLost} lost UDP packet(s) (last: {_lastSequenceNumberReceived}, received: {sequenceNumber})");
             }
 
             _lastSequenceNumberReceived = sequenceNumber;
 
             Scribe.Debug($"[Vessel {_vesselParentReference.Name}] Received UDP packet (seq: {sequenceNumber}, size: {payload.Length} bytes)");
-            
+
             _vesselParentReference.Metrics.JustReacted();
+
             // Process the payload (delegate to game logic)
             ProcessUdpPayload(payload);
         }
@@ -279,4 +296,46 @@ public class UdpIO : IDisposable
 
         _disposed = true;
     }
+
+    #region Sequence Number Utilities (Wraparound-Safe)
+
+    /// <summary>
+    /// Compares two sequence numbers in a wraparound-safe manner using RFC 1982 Serial Number Arithmetic.
+    /// </summary>
+    /// <remarks>
+    /// This assumes sequence numbers don't jump more than 2^31 values at once.
+    /// Treats the sequence space as circular to handle wraparound at uint.MaxValue.
+    /// </remarks>
+    /// <param name="s1">First sequence number</param>
+    /// <param name="s2">Second sequence number</param>
+    /// <returns>
+    /// Negative if s1 is "before" s2,
+    /// Zero if s1 equals s2,
+    /// Positive if s1 is "after" s2
+    /// </returns>
+    private static int CompareSequenceNumbers(uint s1, uint s2)
+    {
+        // Handle the simple case: they're equal
+        if (s1 == s2)
+            return 0;
+
+        // Use RFC 1982 Serial Number Arithmetic
+        // This works because we treat the sequence space as circular
+        const uint halfRange = uint.MaxValue / 2;
+
+        if ((s1 < s2 && s2 - s1 < halfRange) || (s1 > s2 && s1 - s2 > halfRange))
+            return -1; // s1 is "before" s2
+        else
+            return 1;  // s1 is "after" s2
+    }
+
+    /// <summary>
+    /// Checks if sequence number s1 is newer than s2 (wraparound-safe).
+    /// </summary>
+    private static bool IsSequenceNewer(uint s1, uint s2)
+    {
+        return CompareSequenceNumbers(s1, s2) > 0;
+    }
+
+    #endregion
 }

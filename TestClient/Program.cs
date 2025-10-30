@@ -14,13 +14,14 @@ class Program
     private static UdpClient? _udpClient;
     private static NetworkStream? _tcpStream;
     private static string _myGuid = "none";
+    private static IPEndPoint? _serverUdpEndpoint;
 
     private const string CLIENT_SECRET = "FluffyByte_OPUL_SecretKey_2025";
     private static readonly ConcurrentQueue<long> _tickTimes = new();
 
     static async Task Main()
     {
-        Console.WriteLine("=== FluffyByte.OPUL Test Client ===");
+        Console.WriteLine("=== FluffyByte.ProjectMythos Test Client (Debug Version) ===");
         Console.WriteLine("Connecting to server...\n");
 
         try
@@ -38,6 +39,7 @@ class Program
         catch (Exception ex)
         {
             Console.WriteLine($"ERROR: {ex.Message}");
+            Console.WriteLine($"Stack: {ex.StackTrace}");
         }
         finally
         {
@@ -53,7 +55,19 @@ class Program
         _tcpStream = _tcpClient.GetStream();
         Console.WriteLine("✓ TCP Connected");
 
-        _udpClient = new UdpClient();
+        // FIX: Explicitly bind UDP client to a local port
+        // This ensures the socket is ready to receive
+        _udpClient = new UdpClient(0); // 0 = bind to any available port
+
+        // Log the local endpoint we're bound to
+        if(_udpClient.Client.LocalEndPoint == null)
+        {
+            throw new Exception("Failed to bind UDP client to a local endpoint.");
+        }
+
+        var localEp = (IPEndPoint)_udpClient.Client.LocalEndPoint;
+        Console.WriteLine($"✓ UDP Client bound to local port: {localEp.Port}");
+
         await WaitForHandshake();
         await HandleAuthentication();
     }
@@ -76,17 +90,40 @@ class Program
         int udpPort = int.Parse(parts[3]);
 
         Console.WriteLine($"  My GUID: {_myGuid}");
+        Console.WriteLine($"  Server UDP: {serverIp}:{udpPort}");
+
+        // Store server endpoint for future reference
+        _serverUdpEndpoint = new IPEndPoint(IPAddress.Parse(serverIp), udpPort);
 
         // Send UDP handshake
         string udpHandshake = $"HANDSHAKE|{_myGuid}";
         byte[] data = Encoding.UTF8.GetBytes(udpHandshake);
         await _udpClient.SendAsync(data, data.Length, serverIp, udpPort);
-        Console.WriteLine($"→ UDP: Sent handshake to {serverIp}:{udpPort}");
 
-        // Wait for acknowledgment
-        var ackResult = await _udpClient.ReceiveAsync();
+        if(_udpClient.Client.LocalEndPoint == null)
+        {
+            throw new Exception("UDP client local endpoint is null after sending handshake.");
+        }
+
+        var localEp = (IPEndPoint)_udpClient.Client.LocalEndPoint;
+        Console.WriteLine($"→ UDP: Sent handshake from {localEp.Address}:{localEp.Port} to {serverIp}:{udpPort}");
+
+        // Wait for acknowledgment with timeout
+        var receiveTask = _udpClient.ReceiveAsync();
+        var timeoutTask = Task.Delay(5000);
+
+        var completedTask = await Task.WhenAny(receiveTask, timeoutTask);
+
+        if (completedTask == timeoutTask)
+        {
+            Console.WriteLine("❌ UDP Handshake timeout - no ACK received after 5 seconds");
+            Console.WriteLine("   Server may not have our UDP endpoint or firewall is blocking");
+            return;
+        }
+
+        var ackResult = receiveTask.Result;
         string ack = Encoding.UTF8.GetString(ackResult.Buffer);
-        Console.WriteLine($"← UDP: {ack}");
+        Console.WriteLine($"← UDP: {ack} from {ackResult.RemoteEndPoint}");
 
         if (ack == "HANDSHAKE_ACK")
             Console.WriteLine("✓ UDP Handshake Complete\n");
@@ -176,40 +213,77 @@ class Program
     {
         if (_udpClient == null) return;
 
+        Console.WriteLine($"[UDP Receiver] Listening for packets...");
+
         try
         {
+            int packetCount = 0;
             while (true)
             {
                 var result = await _udpClient.ReceiveAsync();
                 var buffer = result.Buffer;
+                packetCount++;
 
-                if (buffer.Length < 21)
-                    continue;
+                Console.WriteLine($"[UDP] Received packet #{packetCount} ({buffer.Length} bytes) from {result.RemoteEndPoint}");
 
-                byte packetType = buffer[0];
-                if (packetType != 1)
-                    continue; // Not a tick packet
-
-                // Ensure consistent little-endian decoding
-                if (!BitConverter.IsLittleEndian)
+                // Handle handshake ACK separately (if it arrives late)
+                if (buffer.Length < 25) // Tick packets are always 25 bytes (4 seq + 21 data)
                 {
-                    Array.Reverse(buffer, 1, 4);
-                    Array.Reverse(buffer, 5, 8);
-                    Array.Reverse(buffer, 13, 8);
+                    string shortMessage = Encoding.UTF8.GetString(buffer);
+                    Console.WriteLine($"  Short message: {shortMessage}");
+                    continue;
                 }
 
-                int tickType = BitConverter.ToInt32(buffer, 1);
-                ulong tickCount = BitConverter.ToUInt64(buffer, 5);
-                long timestamp = BitConverter.ToInt64(buffer, 13);
+                // Extract sequence number (first 4 bytes) - part of server's reliability layer
+                uint sequenceNumber = BitConverter.ToUInt32(buffer, 0);
+                Console.WriteLine($"  Sequence number: {sequenceNumber}");
 
-                // Guard against bad timestamps
-                if (timestamp < 0 || timestamp > DateTimeOffset.MaxValue.ToUnixTimeMilliseconds())
+                // Extract payload (skip first 4 bytes)
+                byte[] payload = new byte[buffer.Length - 4];
+                Array.Copy(buffer, 4, payload, 0, payload.Length);
+
+                // Now decode the actual tick packet from the payload
+                if (payload.Length != 21)
+                {
+                    Console.WriteLine($"  ⚠ Unexpected payload size: {payload.Length} bytes (expected 21)");
                     continue;
+                }
 
-                DateTime tickTime = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime;
+                byte packetType = payload[0];
+                Console.WriteLine($"  Packet type byte: {packetType}");
 
-                _tickTimes.Enqueue(timestamp);
-                Console.WriteLine($"← UDP TICK | Type:{tickType} | Count:{tickCount} | Time:{tickTime:T}");
+                if (packetType != 1)
+                {
+                    Console.WriteLine($"  ⚠ Not a tick packet (expected type 1, got {packetType})");
+                    continue;
+                }
+
+                // Decode the actual tick data from the payload
+                try
+                {
+                    int tickType = BitConverter.ToInt32(payload, 1);
+                    ulong tickCount = BitConverter.ToUInt64(payload, 5);
+                    long timestamp = BitConverter.ToInt64(payload, 13);
+
+                    Console.WriteLine($"  Decoded: Type={tickType}, Count={tickCount}, Timestamp={timestamp}");
+
+
+                    // Guard against bad timestamps
+                    if (timestamp < 0 || timestamp > DateTimeOffset.MaxValue.ToUnixTimeMilliseconds())
+                    {
+                        Console.WriteLine($"  ⚠ Invalid timestamp: {timestamp}");
+                        continue;
+                    }
+
+                    DateTime tickTime = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime;
+
+                    _tickTimes.Enqueue(timestamp);
+                    Console.WriteLine($"← UDP TICK | Type:{tickType} | Count:{tickCount} | Time:{tickTime:T}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  ⚠ Decode error: {ex.Message}");
+                }
             }
         }
         catch (SocketException ex)
@@ -219,6 +293,7 @@ class Program
         catch (Exception ex)
         {
             Console.WriteLine($"UDP Error: {ex.Message}");
+            Console.WriteLine($"Stack: {ex.StackTrace}");
         }
     }
 
@@ -227,12 +302,16 @@ class Program
         while (true)
         {
             await Task.Delay(5000);
-            if (_tickTimes.IsEmpty) continue;
+            if (_tickTimes.IsEmpty)
+            {
+                Console.WriteLine($"[Tick Summary] No ticks received in last 5s ⚠");
+                continue;
+            }
 
             long[] ticks = [.. _tickTimes];
             _tickTimes.Clear();
 
-            Console.WriteLine($"[Tick Summary] Received {ticks.Length} ticks in last 5s");
+            Console.WriteLine($"[Tick Summary] Received {ticks.Length} ticks in last 5s ✓");
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
+using FluffyByte.Tools;
 using FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient;
 using FluffyByte.ProjectMythos.Server.FluffyTypes;
 

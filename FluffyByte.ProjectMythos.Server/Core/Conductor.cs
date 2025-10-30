@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
-using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
 using FluffyByte.ProjectMythos.Server.Core.IO.Networking;
 using FluffyByte.ProjectMythos.Server.Core.TickSystem;
+using FluffyByte.Tools;
 
 namespace FluffyByte.ProjectMythos.Server.Core;
 

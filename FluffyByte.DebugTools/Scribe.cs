@@ -1,10 +1,8 @@
-﻿namespace FluffyByte.ProjectMythos.Server.Core.IO.Debug;
-
-using FluffyByte.ProjectMythos.Server.Core.IO.FluffyFile;
-using System;
+﻿using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 
+namespace FluffyByte.Tools;
 /// <summary>
 /// LogLevel enumeration defines various levels of logging severity.
 /// Debug = 0, Info = 1, Warn = 2, Error = 3, Critical = 4

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using System.Net;
-using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
+using FluffyByte.Tools;
 using FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient;
 
 namespace FluffyByte.ProjectMythos.Server.Core.IO.Networking;

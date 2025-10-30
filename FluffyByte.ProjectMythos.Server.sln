@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FluffyByte.ProjectMythos.Se
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FluffyByte.TestClient", "TestClient\FluffyByte.TestClient.csproj", "{02296B9D-739E-4D60-9DD8-2522791A973E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FluffyByte.MythosGame", "FluffyByte.MythosGame\FluffyByte.MythosGame.csproj", "{1FEBBEFD-D164-4397-A112-C6DBC218E6A3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FluffyByte.Tools", "FluffyByte.DebugTools\FluffyByte.Tools.csproj", "{83E6D75B-FCF7-4ACD-9D00-56201FB3CACA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{02296B9D-739E-4D60-9DD8-2522791A973E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{02296B9D-739E-4D60-9DD8-2522791A973E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{02296B9D-739E-4D60-9DD8-2522791A973E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1FEBBEFD-D164-4397-A112-C6DBC218E6A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1FEBBEFD-D164-4397-A112-C6DBC218E6A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1FEBBEFD-D164-4397-A112-C6DBC218E6A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1FEBBEFD-D164-4397-A112-C6DBC218E6A3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83E6D75B-FCF7-4ACD-9D00-56201FB3CACA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83E6D75B-FCF7-4ACD-9D00-56201FB3CACA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83E6D75B-FCF7-4ACD-9D00-56201FB3CACA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83E6D75B-FCF7-4ACD-9D00-56201FB3CACA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

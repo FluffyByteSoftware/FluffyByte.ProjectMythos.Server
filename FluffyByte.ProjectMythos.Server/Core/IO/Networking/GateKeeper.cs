@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography;
 using System.Text;
-using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
+using FluffyByte.Tools;
 using FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient;
 
 namespace FluffyByte.ProjectMythos.Server.Core.IO.Networking;

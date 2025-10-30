@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using FluffyByte.Tools;
 using FluffyByte.ProjectMythos.Server.Core.TickSystem;
 using FluffyByte.ProjectMythos.Server.Core.IO;
+using FluffyByte.MythosGame.GameState;
 
 namespace FluffyByte.MythosGame;
 
@@ -25,6 +26,9 @@ public class MythosGameModule : IGameModule
     /// </summary>
     public string GameName => "Project Mythos Prototype";
 
+    private Overlord? _overlord;
+    private Realm? _realm;
+
     /// <summary>
     /// Initializes the game module by setting up necessary systems and registering tick processors.
     /// </summary>
@@ -35,23 +39,28 @@ public class MythosGameModule : IGameModule
     /// <param name="weaver">The <see cref="Weaver"/> instance used to register tick processors and manage game system updates.</param>
     public void Initialize(Weaver weaver)
     {
-        Scribe.Info($"[MythosGameModule] Initializing game systems...");
+        Scribe.Info($"[{GameName}] Initializing game module...");
 
-        // Register a simple test tick
-        weaver.RegisterTickProcessor(
-            tickType: TickType.WorldSimulation,
-            intervalMs: 1000, // once per second
-            hasPending: () => true,
-            flushPending: () => new List<string> { "heartbeat" },
-            processBatchAsync: async list =>
-            {
-                foreach (var item in list)
-                {
-                    Scribe.Info($"[MythosGameModule] Tick: {item} — World pulse at {DateTime.Now:T}");
-                }
-                await Task.CompletedTask;
-            });
+        try
+        {
+            //var worldConfig = LoadWorldConfiguration();
 
-        Scribe.Info($"[MythosGameModule] Game module registration complete.");
+            //_realm = new(worldConfig.WorldWidth, worldConfig.WorldHeight);
+            
+            //Scribe.Info($"[{GameName}] Realm created with dimensions: {worldConfig.WorldWidth}x{worldConfig.WorldHeight}");
+
+            //_overlord = new(_realm);
+
+        }
+        catch(Exception ex)
+        {
+            Scribe.Error(ex);
+            throw;
+        }
+    }
+
+    private void LoadWorldConfiguration()
+    {
+
     }
 }

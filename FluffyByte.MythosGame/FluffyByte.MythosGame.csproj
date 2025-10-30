@@ -7,8 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FluffyByte.DebugTools\FluffyByte.Tools.csproj" />
     <ProjectReference Include="..\FluffyByte.ProjectMythos.Server\FluffyByte.ProjectMythos.Server.csproj" />
+    <ProjectReference Include="..\FluffyByte.Tools\FluffyByte.Tools.csproj" />
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(SolutionDir)FluffyByte.ProjectMythos.Server\bin\$(Configuration)\net8.0\$(TargetFileName)&quot;" />
+  </Target>
 
 </Project>

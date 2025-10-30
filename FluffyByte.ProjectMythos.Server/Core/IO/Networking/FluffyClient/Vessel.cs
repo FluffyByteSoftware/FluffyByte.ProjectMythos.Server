@@ -150,6 +150,12 @@ public class Vessel : IDisposable
     {
         try
         {
+            if(Conductor.Instance.Sentinel == null || Conductor.Instance.Sentinel.Watcher == null)
+            {
+                Scribe.Critical("Vessel HandleDisconnect() called but Conductor.Instance.Sentinel.Watcher is null.");
+                return;
+            }
+
             Conductor.Instance.Sentinel.Watcher.UnregisterVessel(this);
 
             tcpClient.Close();

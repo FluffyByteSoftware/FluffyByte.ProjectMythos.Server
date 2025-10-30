@@ -61,7 +61,7 @@ public class Sentinel : CoreProcessBase
     #endregion
 
     #region Local Variables and Constants
-    private TcpListener _listener = new(IPAddress.Any, HOST_TCP_PORT);
+    private TcpListener? _listener;
     private readonly UdpClient _udpSocket;
     private static readonly IPEndPoint DummyEndPoint = new(IPAddress.None, 0);
 
@@ -88,14 +88,17 @@ public class Sentinel : CoreProcessBase
     /// encountered during the initialization of connection listeners are logged.</remarks>
     public override async Task StartAsync()
     {
-        AcceptingNewClients = true;
-        _listener = new(IPAddress.Parse(HOST_TCP_ADDRESS), HOST_TCP_PORT);
-        _listener.Start();
-        Scribe.Info($"[{Name}] Listening for TCP connections on {HOST_TCP_ADDRESS}:{HOST_TCP_PORT}");
-        Scribe.Info($"[{Name}] UDP socket bound to port {HOST_UDP_PORT}");
 
         try
         {
+
+            AcceptingNewClients = true;
+             _listener = new(IPAddress.Parse(HOST_TCP_ADDRESS), HOST_TCP_PORT);
+            _listener?.Start();
+
+            Scribe.Info($"[{Name}] Listening for TCP connections on {HOST_TCP_ADDRESS}:{HOST_TCP_PORT}");
+            Scribe.Info($"[{Name}] UDP socket bound to port {HOST_UDP_PORT}");
+
             _ = ListenForNewConnection();
             _ = ListenForUdpHandshakes();
         }
@@ -117,7 +120,7 @@ public class Sentinel : CoreProcessBase
     {
         try
         {
-            _listener.Stop();
+            _listener?.Stop();
             _udpSocket?.Close();
             AcceptingNewClients = false;
         }
@@ -148,6 +151,12 @@ public class Sentinel : CoreProcessBase
         {
             while (!_shutdownToken.IsCancellationRequested && Watcher.RawTcpClients.Count < MAX_CLIENTS)
             {
+                if (_listener == null)
+                {
+                    Scribe.Critical("[{Name}] TCP listener could not be initialized.");
+                    throw new Exception("TCP listener is null in Sentinel ListenForNewConnection().");
+                }
+
                 TcpClient tcpClient = await _listener.AcceptTcpClientAsync(_shutdownToken);
                 Scribe.Info($"[{Name}] New TCP client connected from {tcpClient.Client.RemoteEndPoint}.");
                 Watcher.RegisterRawTcpClient(tcpClient);

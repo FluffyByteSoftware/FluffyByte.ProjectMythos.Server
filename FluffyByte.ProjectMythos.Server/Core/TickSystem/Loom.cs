@@ -29,7 +29,13 @@ public class Loom(CancellationToken shutdownToken): CoreProcessBase(shutdownToke
     {
         Scribe.Debug($"[{Name}] Forming the weave (initializing tick loops)...");
 
-        var definitions = _weaverRef.GetTickDefinitions();
+        if(Conductor.Instance.Weaver == null)
+        {
+            Scribe.Critical($"[{Name}] Weaver instance is null. Loom will remain idle.");
+            return;
+        }
+
+        var definitions = Conductor.Instance.Weaver.GetTickDefinitions();
 
         if(definitions.Count == 0)
         {
@@ -95,9 +101,7 @@ public class Loom(CancellationToken shutdownToken): CoreProcessBase(shutdownToke
 
         await Task.CompletedTask;
     }
-    #endregion
-
-    private readonly Weaver _weaverRef = Conductor.Instance.Weaver;
+    #endregion   
 
     private readonly Dictionary<TickType, Task> _tickTasks = [];
 

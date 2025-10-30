@@ -1,6 +1,6 @@
 <!DOCTYPE html><html><head>
 <meta charset='utf-8'>
-<title>CoreProcessBase</title>
+<title>Weaver</title>
 <style>
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; line-height: 1.6; max-width: 1200px; }
             .header { margin-bottom: 20px; }
@@ -22,48 +22,47 @@
             li { margin: 10px 0; padding: 10px; background: #fafafa; border-radius: 3px; }
             </style>
 </head><body>
-<div class='header'><a href='../../../../index.html'>← Back to Index</a></div>
-<h1>abstract class CoreProcessBase</h1>
-<div class='namespace'>Namespace: FluffyByte.ProjectMythos.Server.Core</div>
-<div class='type-summary'>Provides a base class for implementing core processes with lifecycle management, including start and stop
-            operations.</div>
+<div class='header'><a href='../../../../../index.html'>← Back to Index</a></div>
+<h1>class Weaver</h1>
+<div class='namespace'>Namespace: FluffyByte.ProjectMythos.Server.Core.TickSystem</div>
+<div class='type-summary'>The Weaver executes game logic bound to tick events fired by the Loom.
+            It is agnostic to what game is running; game modules plug in their logic via registration.</div>
 <h2>Relationships</h2>
 <div class='relationships'>
+<div><strong>Inherits from:</strong> <a href='FluffyByte\ProjectMythos\Server\Core\CoreProcessBase.html'>CoreProcessBase</a></div>
 <div><strong>Implements:</strong> 
 <a href='FluffyByte\ProjectMythos\Server\Core\ICoreProcess.html'>ICoreProcess</a>
 </div>
-<div><strong>Derived types:</strong> 
-<a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\Sentinel.html'>Sentinel</a>, <a href='FluffyByte\ProjectMythos\Server\Core\TickSystem\Loom.html'>Loom</a>, <a href='FluffyByte\ProjectMythos\Server\Core\TickSystem\Weaver.html'>Weaver</a>
 </div>
+<h2>Constructors</h2>
+<div class='member'>
+<div class='signature'><strong>Weaver</strong>(CancellationToken shutdownToken)</div>
+<div class='summary'>Initializes a new instance of the  class.</div>
 </div>
 <h2>Properties</h2>
 <div class='member'>
-<div class='signature'>Guid <strong>Guid</strong> { get; }</div>
-<div class='summary'>Get the unique id for the current Core Process.</div>
-</div>
-<div class='member'>
 <div class='signature'>String <strong>Name</strong> { get; }</div>
-<div class='summary'>Gets the name associated with the current CoreProcess</div>
-</div>
-<div class='member'>
-<div class='signature'>CoreProcessState <strong>State</strong> { get; set; }</div>
-<div class='summary'>Gets the current state of the core process.</div>
+<div class='summary'>Name of the Weaver process.</div>
 </div>
 <h2>Methods</h2>
 <div class='member'>
-<div class='signature'>Task <strong>RequestStartAsync</strong>(CancellationToken shutdownToken)</div>
-<div class='summary'>Initiates the start process for the current instance asynchronously.</div>
+<div class='signature'>IReadOnlyDictionary`2 <strong>GetTickDefinitions</strong>()</div>
+<div class='summary'>Called by the Loom to discover which ticks should run and at what intervals.</div>
 </div>
 <div class='member'>
-<div class='signature'>Task <strong>RequestStopAsync</strong>()</div>
-<div class='summary'>Requests the service to stop its operations asynchronously.</div>
+<div class='signature'>Task <strong>ProcessTick</strong>(TickType tickType)</div>
+<div class='summary'>Called by the Loom every time a tick type fires.
+            Delegates execution to the game-defined TickProcessor for that tick type.</div>
+</div>
+<div class='member'>
+<div class='signature'>Void <strong>RegisterTickProcessor</strong>(TickType tickType, Int32 intervalMs, Func`1 hasPending, Func`1 flushPending, Func`2 processBatchAsync)</div>
 </div>
 <div class='member'>
 <div class='signature'>Task <strong>StartAsync</strong>()</div>
-<div class='summary'>Starts the asynchronous operation.</div>
+<div class='summary'>Starts the Weaver. Typically invoked by the Conductor during server boot.</div>
 </div>
 <div class='member'>
 <div class='signature'>Task <strong>StopAsync</strong>()</div>
-<div class='summary'>Initiates an asynchronous operation to stop the service.</div>
+<div class='summary'>Stops the Weaver gracefully. Called when the server is shutting down.</div>
 </div>
 </body></html>

@@ -32,6 +32,8 @@ namespace FluffyByte.ProjectMythos.Server.Core.TickSystem
         private readonly Dictionary<TickType, TickProcessor> _tickProcessors = [];
         private readonly object _registryLock = new();
 
+        private const string GAME_ASSEMBLY_PATH = "FluffyByte.MythosGame.dll";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Weaver"/> class.
         /// </summary>
@@ -163,7 +165,7 @@ namespace FluffyByte.ProjectMythos.Server.Core.TickSystem
             try
             {
                 // You can later externalize this to config (path or module name).
-                const string gameAssemblyPath = "FluffyByte.ProjectMythos.Game.dll";
+                string gameAssemblyPath = GAME_ASSEMBLY_PATH;
 
                 if (!System.IO.File.Exists(gameAssemblyPath))
                 {
@@ -177,6 +179,7 @@ namespace FluffyByte.ProjectMythos.Server.Core.TickSystem
                 if (moduleType == null)
                 {
                     Scribe.Warn($"[Weaver] No class implementing IGameModule found in {gameAssemblyPath}.");
+                    Scribe.Warn($"Path was null: {gameAssemblyPath}");
                     return;
                 }
 

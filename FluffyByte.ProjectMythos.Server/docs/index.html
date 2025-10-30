@@ -36,8 +36,8 @@
             shutdown, and monitoring operations.</div>
 </li>
 <li><span class='type-kind'>abstract class</span> <a href='FluffyByte\ProjectMythos\Server\Core\CoreProcessBase.html'>CoreProcessBase</a>
-<div class='summary'>Represents the base class for core processes, providing a framework for managing process lifecycle operations such
-            as starting and stopping.</div>
+<div class='summary'>Provides a base class for implementing core processes with lifecycle management, including start and stop
+            operations.</div>
 </li>
 <li><span class='type-kind'>enum</span> <a href='FluffyByte\ProjectMythos\Server\Core\CoreProcessState.html'>CoreProcessState</a>
 <div class='summary'>Defines the various states that a CoreProcess can be in.
@@ -48,15 +48,10 @@
             methods to manage its lifecycle through asynchronous start and stop operations.</div>
 </li>
 </ul>
-<h2>FluffyByte.ProjectMythos.Server.Core.IO.Debug</h2>
+<h2>FluffyByte.ProjectMythos.Server.Core.IO</h2>
 <ul>
-<li><span class='type-kind'>enum</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Debug\LogLevel.html'>LogLevel</a>
-<div class='summary'>LogLevel enumeration defines various levels of logging severity.
-            Debug = 0, Info = 1, Warn = 2, Error = 3, Critical = 4</div>
-</li>
-<li><span class='type-kind'>static class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Debug\Scribe.html'>Scribe</a>
-<div class='summary'>Provides logging functionality for various log levels, including debug, informational, warning, error, and critical
-            messages.</div>
+<li><span class='type-kind'>interface</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\IGameModule.html'>IGameModule</a>
+<div class='summary'>Represents a module within a game, providing functionality specific to the module's purpose.</div>
 </li>
 </ul>
 <h2>FluffyByte.ProjectMythos.Server.Core.IO.FluffyFile</h2>
@@ -101,6 +96,19 @@
 </li>
 <li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\IO\Networking\FluffyClient\Vessel.html'>Vessel</a>
 <div class='summary'>Represents a vessel class which wraps around a TcpClient and UdpClient for managing a network connection.</div>
+</li>
+</ul>
+<h2>FluffyByte.ProjectMythos.Server.Core.TickSystem</h2>
+<ul>
+<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\TickSystem\Loom.html'>Loom</a>
+<div class='summary'>Represents the Loom process, which manages and executes periodic tasks based on predefined tick types.</div>
+</li>
+<li><span class='type-kind'>enum</span> <a href='FluffyByte\ProjectMythos\Server\Core\TickSystem\TickType.html'>TickType</a>
+<div class='summary'>Specifies the types of actions or categories that can occur within the system.</div>
+</li>
+<li><span class='type-kind'>class</span> <a href='FluffyByte\ProjectMythos\Server\Core\TickSystem\Weaver.html'>Weaver</a>
+<div class='summary'>The Weaver executes game logic bound to tick events fired by the Loom.
+            It is agnostic to what game is running; game modules plug in their logic via registration.</div>
 </li>
 </ul>
 <h2>FluffyByte.ProjectMythos.Server.FluffyTypes</h2>

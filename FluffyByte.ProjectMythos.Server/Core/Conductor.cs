@@ -32,22 +32,22 @@ public class Conductor
     /// <summary>
     /// Gets the sentinel instance used to monitor and manage the state of the system.
     /// </summary>
-    public Sentinel Sentinel { get; private set; }
+    public Sentinel? Sentinel { get; private set; }
     
     /// <summary>
     /// Gets the <see cref="Watcher"/> instance associated with this object.
     /// </summary>
-    public Watcher Watcher { get; private set; }
+    public Watcher? Watcher { get; private set; }
 
     /// <summary>
     /// Gets the instance of the <see cref="Weaver"/> associated with this object.
     /// </summary>
-    public Weaver Weaver { get; private set; }
+    public Weaver? Weaver { get; private set; }
 
     /// <summary>
     /// Gets the instance of the <see cref="Loom"/> associated with this object.
     /// </summary>
-    public Loom Loom { get; private set; }
+    public Loom? Loom { get; private set; }
 
     /// <summary>
     /// Gets the <see cref="CancellationToken"/> that is triggered when the application is shutting down.
@@ -57,7 +57,7 @@ public class Conductor
     /// <summary>
     /// Raw list of all processes to start.
     /// </summary>
-    private readonly List<ICoreProcess> _processList = [];
+    private readonly List<ICoreProcess> _processList;
 
 
     /// <summary>
@@ -69,16 +69,7 @@ public class Conductor
     private Conductor() 
     {
         ShutdownToken = new();
-
-        Sentinel = new(ShutdownToken);
-
-        Watcher = Sentinel.Watcher;
-
-        Weaver = new(ShutdownToken);
-
-        Loom = new(ShutdownToken);
-
-        _processList.Add(Sentinel);
+        _processList = [];
     }
 
     /// <summary>
@@ -97,7 +88,15 @@ public class Conductor
         {
             Sentinel = new(ShutdownToken);
             Weaver = new(ShutdownToken);
+            Watcher = Sentinel.Watcher;
             Loom = new(ShutdownToken);
+            
+            
+            Watcher = Sentinel.Watcher;
+
+            _processList.Add(Sentinel);
+            _processList.Add(Weaver);
+            _processList.Add(Loom);
 
             foreach(ICoreProcess process in _processList)
             {

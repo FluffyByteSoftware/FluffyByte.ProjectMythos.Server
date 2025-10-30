@@ -11,9 +11,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FluffyByte.ProjectMythos.Server.Core.IO;
+using FluffyByte.ProjectMythos.Server.Core.IO.Networking;
+using FluffyByte.ProjectMythos.Server.Core.IO.Networking.FluffyClient;
 using FluffyByte.Tools;
 
 namespace FluffyByte.ProjectMythos.Server.Core.TickSystem
@@ -31,6 +34,7 @@ namespace FluffyByte.ProjectMythos.Server.Core.TickSystem
 
         private readonly Dictionary<TickType, TickProcessor> _tickProcessors = [];
         private readonly object _registryLock = new();
+        private readonly Dictionary<TickType, ulong> _tickCounters = [];
 
         private const string GAME_ASSEMBLY_PATH = "FluffyByte.MythosGame.dll";
 
@@ -125,13 +129,26 @@ namespace FluffyByte.ProjectMythos.Server.Core.TickSystem
         #endregion
 
         #region Execution
-
         /// <summary>
-        /// Called by the Loom every time a tick type fires.
-        /// Delegates execution to the game-defined TickProcessor for that tick type.
+        /// Processes a single tick of the specified type, executing any registered handlers and broadcasting the tick
+        /// to connected vessels.
         /// </summary>
+        /// <remarks>This method performs the following operations: <list type="bullet"> <item>Maintains
+        /// an internal counter for the specified tick type.</item> <item>Executes any registered handlers for the tick
+        /// type, if pending tasks exist.</item> <item>Broadcasts the tick information to connected and authenticated
+        /// vessels via UDP, if applicable.</item> </list> Exceptions during handler execution or broadcasting are
+        /// logged but do not interrupt the overall processing flow.</remarks>
+        /// <param name="tickType">The type of tick to process. This determines the associated handlers and the tick's context.</param>
         public async Task ProcessTick(TickType tickType)
         {
+            // Maintain per-tick counter safely
+            if (!_tickCounters.ContainsKey(tickType))
+                _tickCounters[tickType] = 0;
+
+            ulong tickCount = ++_tickCounters[tickType];
+
+            Scribe.Info($"[Weaver] Processing tick: {tickType}");
+
             TickProcessor? processor;
             lock (_registryLock)
             {
@@ -139,20 +156,85 @@ namespace FluffyByte.ProjectMythos.Server.Core.TickSystem
                     return; // no handler registered for this tick type
             }
 
-            if (!processor.HasPending())
-                return;
+            // Run processor only if it has pending work
+            if (processor.HasPending())
+            {
+                var batch = processor.FlushPending();
+                try
+                {
+                    await processor.ProcessBatchAsync(batch);
+                }
+                catch (Exception ex)
+                {
+                    Scribe.Error($"[Weaver] Exception in {tickType} tick: {ex.Message}");
+                }
+            }
 
-            var batch = processor.FlushPending();
+            // Always broadcast tick (even if processor didn't run)
             try
             {
-                await processor.ProcessBatchAsync(batch);
+                var sentinel = Conductor.Instance.Sentinel;
+                if (sentinel?.Watcher == null)
+                {
+                    Scribe.Critical("[Weaver] ProcessTick() called but Conductor.Instance.Sentinel.Watcher is null.");
+                    return;
+                }
+
+                // Build packet once; reuse for all vessels
+                byte[] packet = BuildTickPacket(tickType, tickCount);
+
+                // Snapshot current vessels to avoid concurrent modifications
+                List<Vessel> vessels = [.. sentinel.Watcher.Vessels];
+
+                if(vessels.Count <= 0)
+                {
+                    Scribe.Warn($"[Weaver] No vessels connected to broadcast {tickType} tick {tickCount}.");
+                }
+
+                int sentCount = 0;
+                foreach (var vessel in vessels)
+                {
+                    if (!vessel.IsAuthenticated || vessel.Disconnecting)
+                        continue;
+
+                    // Fire-and-forget; UDP send is non-blocking
+                    _ = vessel.UdpIO.SendAsync(packet);
+                    sentCount++;
+                }
+
+                Scribe.Debug($"[Weaver] Broadcasted {tickType} tick {tickCount} to {sentCount} authenticated vessel(s).");
             }
             catch (Exception ex)
             {
-                Scribe.Error($"[Weaver] Exception in {tickType} tick: {ex.Message}");
+                Scribe.Warn($"[Weaver] Failed to broadcast tick for {tickType}: {ex.Message}");
             }
         }
 
+
+        /// <summary>
+        /// Builds a binary tick packet with fixed layout:
+        /// [1 byte type][4 bytes tickType][8 bytes tickCount][8 bytes timestamp]
+        /// </summary>
+        private static byte[] BuildTickPacket(TickType tickType, ulong tickCount)
+        {
+            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            byte[] packet = new byte[21];
+
+            packet[0] = 1; // Packet type: TICK
+            BitConverter.GetBytes((int)tickType).CopyTo(packet, 1);
+            BitConverter.GetBytes(tickCount).CopyTo(packet, 5);
+            BitConverter.GetBytes(timestamp).CopyTo(packet, 13);
+
+            // Enforce consistent little-endian byte order for cross-platform compatibility
+            if (!BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(packet, 1, 4);
+                Array.Reverse(packet, 5, 8);
+                Array.Reverse(packet, 13, 8);
+            }
+
+            return packet;
+        }
         #endregion
 
         #region Module Loading

@@ -59,6 +59,8 @@ public static class Program
     {
         try
         {
+            Console.WriteLine("Preparing to generate docs...");
+
             string assemblyPath = Assembly.GetExecutingAssembly().Location;
             string output = Path.Combine(
                 Path.GetDirectoryName(assemblyPath)!,

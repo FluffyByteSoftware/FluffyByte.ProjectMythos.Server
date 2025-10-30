@@ -156,6 +156,9 @@ public static class GateKeeper
         if (string.IsNullOrEmpty(actual))
             return false;
 
+        actual = actual.Trim();
+        expected = expected.Trim();
+
         // Use constant-time comparison to prevent timing attacks
         return CryptographicOperations.FixedTimeEquals(
             Encoding.UTF8.GetBytes(expected),

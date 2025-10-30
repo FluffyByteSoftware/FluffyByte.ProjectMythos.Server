@@ -34,10 +34,6 @@ IDisposable
 </div>
 <h2>Constructors</h2>
 <div class='member'>
-<div class='signature'><strong>UdpIO</strong>(Vessel parent)</div>
-<div class='summary'>Initializes a new instance of the  class with the specified parent vessel.</div>
-</div>
-<div class='member'>
 <div class='signature'><strong>UdpIO</strong>(Vessel parent, IPEndPoint udpEndpoint)</div>
 <div class='summary'>Initializes a new instance of the  class with UDP endpoint information.</div>
 </div>
@@ -66,6 +62,10 @@ IDisposable
 <div class='member'>
 <div class='signature'>Boolean <strong>IsTimedOut</strong>(Int32 timeoutSeconds)</div>
 <div class='summary'>Checks if this vessel's UDP connection has timed out.</div>
+</div>
+<div class='member'>
+<div class='signature'>Void <strong>MarkHandshakeComplete</strong>()</div>
+<div class='summary'>Marks the handshake process as complete.</div>
 </div>
 <div class='member'>
 <div class='signature'>Void <strong>OnPacketReceived</strong>(Byte[] packet)</div>

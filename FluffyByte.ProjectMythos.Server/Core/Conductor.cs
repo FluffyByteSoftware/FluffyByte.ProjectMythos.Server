@@ -84,23 +84,28 @@ public class Conductor
     {
         ShutdownToken = new();
 
+        _processList.Clear();
+
         try
         {
             Sentinel = new(ShutdownToken);
+            Loom = new(ShutdownToken);
             Weaver = new(ShutdownToken);
             Watcher = Sentinel.Watcher;
-            Loom = new(ShutdownToken);
+            
             
             
             Watcher = Sentinel.Watcher;
 
             _processList.Add(Sentinel);
-            _processList.Add(Weaver);
             _processList.Add(Loom);
+            _processList.Add(Weaver);
+            
 
             foreach(ICoreProcess process in _processList)
             {
                 await process.RequestStartAsync(ShutdownToken);
+
                 LaunchedProcesses.Add(process);
 
                 if(process.Name == "Sentinel")

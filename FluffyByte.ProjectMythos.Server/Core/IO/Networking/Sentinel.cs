@@ -120,17 +120,54 @@ public class Sentinel : CoreProcessBase
     {
         try
         {
-            _listener?.Stop();
-            _udpSocket?.Close();
             AcceptingNewClients = false;
+
+            CancellationTokenSource _shutdownTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken);
+
+            if (_shutdownTokenSource is not null && !_shutdownTokenSource.IsCancellationRequested)
+                _shutdownTokenSource.Cancel();
+
+            await Task.Delay(100); // small grace period
+
+            // Stop the TCP listener safely (no Shutdown here)
+            try
+            {
+                _listener?.Stop();
+            }
+            catch (ObjectDisposedException) { /* ignore */ }
+            catch (SocketException ex)
+            {
+                Scribe.Warn($"[{Name}] SocketException during Stop: {ex.Message}");
+            }
+
+            // Close UDP socket
+            try
+            {
+                _udpSocket?.Close();
+            }
+            catch (Exception ex)
+            {
+                Scribe.Warn($"[{Name}] Error closing UDP socket: {ex.Message}");
+            }
+
+            // Disconnect vessels gracefully
+            foreach (var vessel in Watcher.Vessels)
+            {
+                try { await vessel.DisconnectAsync(); }
+                catch (Exception ex)
+                {
+                    Scribe.Warn($"[{Name}] Error disconnecting vessel: {ex.Message}");
+                }
+            }
+
+            Scribe.Info($"[{Name}] Shutdown complete.");
         }
         catch (Exception ex)
         {
             Scribe.Error(ex);
         }
-
-        await Task.CompletedTask;
     }
+
 
     #endregion
 
@@ -300,6 +337,10 @@ public class Sentinel : CoreProcessBase
             while (!_shutdownToken.IsCancellationRequested)
             {
                 var result = await SafeReceiveAsync(_udpSocket, _shutdownToken);
+
+                if (result.RemoteEndPoint.Address.Equals(IPAddress.None) || result.RemoteEndPoint.Port == 0)
+                    continue;
+
                 string message = System.Text.Encoding.UTF8.GetString(result.Buffer);
 
                 if (message.StartsWith("HANDSHAKE|"))

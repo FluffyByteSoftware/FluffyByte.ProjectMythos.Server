@@ -51,8 +51,8 @@
 </div>
 <div class='member'>
 <div class='signature'>Task <strong>ProcessTick</strong>(TickType tickType)</div>
-<div class='summary'>Called by the Loom every time a tick type fires.
-            Delegates execution to the game-defined TickProcessor for that tick type.</div>
+<div class='summary'>Processes a single tick of the specified type, executing any registered handlers and broadcasting the tick
+            to connected vessels.</div>
 </div>
 <div class='member'>
 <div class='signature'>Void <strong>RegisterTickProcessor</strong>(TickType tickType, Int32 intervalMs, Func`1 hasPending, Func`1 flushPending, Func`2 processBatchAsync)</div>

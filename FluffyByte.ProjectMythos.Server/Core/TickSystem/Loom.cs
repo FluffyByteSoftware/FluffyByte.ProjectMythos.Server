@@ -79,9 +79,19 @@ public class Loom(CancellationToken shutdownToken): CoreProcessBase(shutdownToke
 
         try
         {
-            if(_tickTasks.Count > 0)
+            CancellationTokenSource _shutdownTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken);
+
+            if (_shutdownTokenSource is not null && !_shutdownTokenSource.IsCancellationRequested)
+                _shutdownTokenSource.Cancel();
+
+            // Wait a brief grace period for tasks that respect the token.
+            var allTasks = _tickTasks.Values.ToArray();
+            var stopTimeout = Task.Delay(2000); // 2s grace window
+
+            var completed = await Task.WhenAny(Task.WhenAll(allTasks), stopTimeout);
+            if (completed == stopTimeout)
             {
-                await Task.WhenAll(_tickTasks.Values);
+                Scribe.Debug($"[{Name}] Some tick loops did not shut down within timeout.");
             }
 
             Scribe.Debug($"[{Name}] All tick loops stopped cleanly.");
@@ -94,13 +104,12 @@ public class Loom(CancellationToken shutdownToken): CoreProcessBase(shutdownToke
         {
             Scribe.Debug($"[{Name}] Tick loops canceled via shutdown token.");
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Scribe.Error(ex);
         }
-
-        await Task.CompletedTask;
     }
+
     #endregion   
 
     private readonly Dictionary<TickType, Task> _tickTasks = [];
@@ -134,8 +143,23 @@ public class Loom(CancellationToken shutdownToken): CoreProcessBase(shutdownToke
     /// - updates moving average
     /// - calls Weaver.ProcessTick(tickType, count)
     /// </summary>
+    /// <summary>
+    /// The per-TickType timing loop:
+    /// - waits the prescribed interval
+    /// - measures execution time
+    /// - updates moving average
+    /// - calls Weaver.ProcessTick(tickType)
+    /// </summary>
     private async Task TickLoop(TickType tickType, int intervalMs)
     {
+        var weaver = Conductor.Instance.Weaver;
+
+        if (weaver == null)
+        {
+            Scribe.Critical($"[{Name}] Weaver reference is null inside tick loop for {tickType}. Loop will exit.");
+            return;
+        }
+
         Stopwatch stopwatch = _tickTimers[tickType];
 
         while (!_shutdownToken.IsCancellationRequested)
@@ -144,7 +168,15 @@ public class Loom(CancellationToken shutdownToken): CoreProcessBase(shutdownToke
 
             try
             {
-                var count = _tickCounters[tickType]++;
+                // Execute the tick logic in the Weaver
+                await weaver.ProcessTick(tickType);
+                _tickCounters[tickType]++;
+
+                // Measure execution time
+                stopwatch.Stop();
+                UpdateAverageTickTime(tickType, stopwatch.Elapsed.TotalMilliseconds);
+
+                Scribe.Debug($"[{Name}] Tick {tickType} processed in {stopwatch.Elapsed.TotalMilliseconds:F2} ms (avg {_avgTickTimesMs[tickType]:F2} ms)");
             }
             catch (TaskCanceledException)
             {
@@ -154,27 +186,32 @@ public class Loom(CancellationToken shutdownToken): CoreProcessBase(shutdownToke
             catch (OperationCanceledException)
             {
                 Scribe.Debug($"[{Name}] Tick loop for {tickType} canceled via shutdown token.");
+                break;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Scribe.Error(ex);
+                Scribe.Error($"[{Name}] Exception during {tickType} tick: {ex}");
             }
 
             try
             {
+                // Wait until the next interval
                 await Task.Delay(intervalMs, _shutdownToken);
             }
-            catch(TaskCanceledException)
+            catch (TaskCanceledException)
             {
-                Scribe.Debug($"[{Name}] Tick loop for {tickType} canceled via shutdown token during delay.");
+                Scribe.Debug($"[{Name}] Tick loop for {tickType} canceled during delay.");
                 break;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Scribe.Error(ex);
+                Scribe.Error($"[{Name}] Exception in delay loop for {tickType}: {ex.Message}");
             }
         }
+
+        Scribe.Debug($"[{Name}] Tick loop for {tickType} exited cleanly.");
     }
+
 
     private void UpdateAverageTickTime(TickType tickType, double elapsedMs)
     {

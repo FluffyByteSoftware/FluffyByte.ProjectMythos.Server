@@ -35,19 +35,35 @@ public class UdpIO : IDisposable
     private uint _lastSequenceNumberSent = 0;
     private uint _lastSequenceNumberReceived = 0;
 
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="UdpIO"/> class with the specified parent vessel.
+    /// Initializes a new instance of the <see cref="UdpIO"/> class with UDP endpoint information.
     /// </summary>
-    /// <remarks>The <see cref="UdpIO"/> instance is linked to the specified parent vessel, which may be used
-    /// to manage or interact with the vessel's data or operations.</remarks>
-    /// <param name="parent">The parent <see cref="Vessel"/> associated with this instance. This parameter cannot be null.</param>
-    public UdpIO(Vessel parent)
+    /// <param name="parent">The vessel instance that owns this UDP I/O handler.</param>
+    /// <param name="udpEndpoint">The client's UDP endpoint obtained during handshake.</param>
+    public UdpIO(Vessel parent, IPEndPoint udpEndpoint)
     {
         _vesselParentReference = parent;
-        
+
+        // ✅ this line ensures we use the same shared UDP socket from the server
         _sharedUdpSocket = parent.UdpClient;
 
-        RemoteEndPoint = parent.UdpEndPoint;
+        RemoteEndPoint = udpEndpoint;
+        IsHandshakeComplete = true;
+
+        if (_vesselParentReference.Metrics != null)
+            _vesselParentReference.Metrics.LastPacketUdpReceivedTime = DateTime.UtcNow;
+    }
+
+
+    /// <summary>
+    /// Marks the handshake process as complete.
+    /// </summary>
+    /// <remarks>This method sets the <see cref="IsHandshakeComplete"/> property to <see langword="true"/>, 
+    /// indicating that the handshake process has successfully finished.</remarks>
+    public void MarkHandshakeComplete()
+    {
+        IsHandshakeComplete = true;
     }
 
     /// <summary>
@@ -59,24 +75,6 @@ public class UdpIO : IDisposable
     {
         _sharedUdpSocket = sharedSocket;
         Scribe.Info("[UdpIO] Shared UDP socket initialized.");
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="UdpIO"/> class with UDP endpoint information.
-    /// </summary>
-    /// <param name="parent">The vessel instance that owns this UDP I/O handler.</param>
-    /// <param name="udpEndpoint">The client's UDP endpoint obtained during handshake.</param>
-    public UdpIO(Vessel parent, IPEndPoint udpEndpoint)
-    {
-        _vesselParentReference = parent;
-        RemoteEndPoint = udpEndpoint;
-        IsHandshakeComplete = true;
-        _vesselParentReference.Metrics.LastPacketUdpReceivedTime = DateTime.UtcNow;
-
-        if (_sharedUdpSocket == null)
-        {
-            throw new InvalidOperationException("UdpIO.Initialize() must be called before creating vessels.");
-        }
     }
 
     /// <summary>

@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net.Sockets;
-using System.Numerics;
-using System.Runtime.Intrinsics.Arm;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
+using System.Net;
 
 namespace FluffyByte.TestClient;
 
@@ -16,8 +15,8 @@ class Program
     private static NetworkStream? _tcpStream;
     private static string _myGuid = "none";
 
-    // Must match server's secret
     private const string CLIENT_SECRET = "FluffyByte_OPUL_SecretKey_2025";
+    private static readonly ConcurrentQueue<long> _tickTimes = new();
 
     static async Task Main()
     {
@@ -28,7 +27,11 @@ class Program
         {
             await ConnectToServer();
 
-            // Keep alive
+            // Background listeners
+            _ = Task.Run(ReceiveTcpMessages);
+            _ = Task.Run(ReceiveUdpPackets);
+            _ = Task.Run(ReportTickRate);
+
             Console.WriteLine("\nPress any key to disconnect...");
             Console.ReadKey();
         }
@@ -45,31 +48,19 @@ class Program
 
     static async Task ConnectToServer()
     {
-        // Connect TCP
         _tcpClient = new TcpClient();
         await _tcpClient.ConnectAsync("10.0.0.84", 9997);
         _tcpStream = _tcpClient.GetStream();
-
         Console.WriteLine("✓ TCP Connected");
 
-        // Initialize UDP
         _udpClient = new UdpClient();
-
-        // Wait for handshake
         await WaitForHandshake();
-
-        // Wait for authentication challenge
         await HandleAuthentication();
-
-        // Start listening tasks
-        _ = Task.Run(ReceiveTcpMessages);
-        _ = Task.Run(ReceiveUdpPackets);
     }
 
     static async Task WaitForHandshake()
     {
-        if (_tcpStream == null) return;
-        if (_udpClient == null || _tcpClient == null) return;
+        if (_tcpStream == null || _udpClient == null) return;
 
         byte[] buffer = new byte[1024];
         int bytesRead = await _tcpStream.ReadAsync(buffer);
@@ -77,43 +68,39 @@ class Program
 
         Console.WriteLine($"← TCP: {message}");
 
-        // Parse: "HANDSHAKE|<Guid>|<IP>|<Port>"
-        if (message.StartsWith("HANDSHAKE|"))
-        {
-            string[] parts = message.Split('|');
-            _myGuid = parts[1];
-            string serverIp = parts[2];
-            int udpPort = int.Parse(parts[3]);
+        if (!message.StartsWith("HANDSHAKE|")) return;
 
-            Console.WriteLine($"  My GUID: {_myGuid}");
+        string[] parts = message.Split('|');
+        _myGuid = parts[1];
+        string serverIp = parts[2];
+        int udpPort = int.Parse(parts[3]);
 
-            // Send UDP handshake response
-            string udpHandshake = $"HANDSHAKE|{_myGuid}";
-            byte[] data = Encoding.UTF8.GetBytes(udpHandshake);
-            await _udpClient.SendAsync(data, data.Length, serverIp, udpPort);
+        Console.WriteLine($"  My GUID: {_myGuid}");
 
-            Console.WriteLine($"→ UDP: Sent handshake to {serverIp}:{udpPort}");
+        // Send UDP handshake
+        string udpHandshake = $"HANDSHAKE|{_myGuid}";
+        byte[] data = Encoding.UTF8.GetBytes(udpHandshake);
+        await _udpClient.SendAsync(data, data.Length, serverIp, udpPort);
+        Console.WriteLine($"→ UDP: Sent handshake to {serverIp}:{udpPort}");
 
-            // Wait for acknowledgment
-            var ackResult = await _udpClient.ReceiveAsync();
-            string ack = Encoding.UTF8.GetString(ackResult.Buffer);
-            Console.WriteLine($"← UDP: {ack}");
+        // Wait for acknowledgment
+        var ackResult = await _udpClient.ReceiveAsync();
+        string ack = Encoding.UTF8.GetString(ackResult.Buffer);
+        Console.WriteLine($"← UDP: {ack}");
 
-            if (ack == "HANDSHAKE_ACK")
-            {
-                Console.WriteLine("✓ UDP Handshake Complete\n");
-            }
-        }
+        if (ack == "HANDSHAKE_ACK")
+            Console.WriteLine("✓ UDP Handshake Complete\n");
+        else
+            Console.WriteLine("❌ UDP Handshake Failed\n");
     }
+
     static async Task HandleAuthentication()
     {
         if (_tcpStream == null) return;
 
         Console.WriteLine("Waiting for authentication challenge...");
-
         byte[] buffer = new byte[1024];
 
-        // Keep reading until we get the AUTH_CHALLENGE
         while (true)
         {
             int bytesRead = await _tcpStream.ReadAsync(buffer);
@@ -124,54 +111,37 @@ class Program
             }
 
             string message = Encoding.UTF8.GetString(buffer, 0, bytesRead).Trim();
-
-            // Skip empty or junk messages
-            if (string.IsNullOrWhiteSpace(message))
-                continue;
+            if (string.IsNullOrWhiteSpace(message)) continue;
 
             Console.WriteLine($"← TCP: {message}");
 
             if (message.StartsWith("AUTH_CHALLENGE|"))
             {
-                string challenge = message.Split('|')[1];
+                string challenge = message["AUTH_CHALLENGE|".Length..];
                 Console.WriteLine($"  Challenge: {challenge}");
 
-                // Compute response using HMACSHA256
                 string response = ComputeAuthResponse(challenge);
-                Console.WriteLine($"  Computed Response: {response}");
+                Console.WriteLine($"  HMAC: {response}");
 
-                // Send response as TEXT (not binary)
                 string responseMessage = $"AUTH_RESPONSE|{response}\n";
                 byte[] data = Encoding.UTF8.GetBytes(responseMessage);
                 await _tcpStream.WriteAsync(data);
                 await _tcpStream.FlushAsync();
+                Console.WriteLine("→ TCP: Sent auth response");
 
-                Console.WriteLine($"→ TCP: Sent auth response");
-
-                // Wait for auth result
                 bytesRead = await _tcpStream.ReadAsync(buffer);
                 string result = Encoding.UTF8.GetString(buffer, 0, bytesRead).Trim();
-
                 Console.WriteLine($"← TCP: {result}");
 
                 if (result == "AUTH_SUCCESS")
-                {
                     Console.WriteLine("✓ Authentication Successful!\n");
-                }
                 else
-                {
                     Console.WriteLine("❌ Authentication Failed\n");
-                }
 
-                break; // Exit the loop after handling auth
-            }
-            else
-            {
-                Console.WriteLine($"  (Ignoring non-challenge message)");
+                break;
             }
         }
     }
-
 
     static string ComputeAuthResponse(string challenge)
     {
@@ -180,92 +150,14 @@ class Program
         return Convert.ToBase64String(hash);
     }
 
-    /// <summary>
-    /// Reads a binary packet from TCP stream (length-prefixed).
-    /// Matches server's WriteBinary format: [4 bytes length][data]
-    /// </summary>
-    static async Task<byte[]?> ReadBinaryAsync()
-    {
-        if (_tcpStream == null) return null;
-
-        try
-        {
-            // Read length prefix (4 bytes)
-            byte[] lengthBuffer = new byte[4];
-            int bytesRead = await _tcpStream.ReadAsync(lengthBuffer.AsMemory(0, 4));
-
-            if (bytesRead != 4)
-            {
-                Console.WriteLine("Failed to read length prefix");
-                return null;
-            }
-
-            int length = BitConverter.ToInt32(lengthBuffer, 0);
-
-            if (length <= 0 || length > 10 * 1024 * 1024) // 10 MB max
-            {
-                Console.WriteLine($"Invalid binary length: {length}");
-                return null;
-            }
-
-            // Read actual data
-            byte[] data = new byte[length];
-            int totalRead = 0;
-
-            while (totalRead < length)
-            {
-                int read = await _tcpStream.ReadAsync(data.AsMemory(totalRead, length - totalRead));
-                if (read == 0)
-                {
-                    Console.WriteLine("Connection closed while reading binary data");
-                    return null;
-                }
-                totalRead += read;
-            }
-
-            return data;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"ReadBinary Error: {ex.Message}");
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Writes binary data to TCP stream (length-prefixed).
-    /// Matches server's ReadyBinary format: [4 bytes length][data]
-    /// </summary>
-    static async Task WriteBinaryAsync(byte[] data)
-    {
-        if (_tcpStream == null) return;
-
-        try
-        {
-            // Write length prefix (4 bytes)
-            byte[] lengthBytes = BitConverter.GetBytes(data.Length);
-            await _tcpStream.WriteAsync(lengthBytes.AsMemory(0, 4));
-
-            // Write actual data
-            await _tcpStream.WriteAsync(data);
-            await _tcpStream.FlushAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"WriteBinary Error: {ex.Message}");
-        }
-    }
-
     static async Task ReceiveTcpMessages()
     {
-        byte[] buffer = new byte[1024];
-
         if (_tcpStream == null) return;
-        if (_udpClient == null || _tcpClient == null) return;
+        byte[] buffer = new byte[1024];
 
         try
         {
-            while (_tcpClient.Connected)
+            while (_tcpClient?.Connected == true)
             {
                 int bytesRead = await _tcpStream.ReadAsync(buffer);
                 if (bytesRead == 0) break;
@@ -282,29 +174,65 @@ class Program
 
     static async Task ReceiveUdpPackets()
     {
-        if (_tcpStream == null) return;
-        if (_udpClient == null || _tcpClient == null) return;
+        if (_udpClient == null) return;
 
         try
         {
             while (true)
             {
                 var result = await _udpClient.ReceiveAsync();
+                var buffer = result.Buffer;
 
-                // Extract sequence number
-                uint seqNum = BitConverter.ToUInt32(result.Buffer, 0);
+                if (buffer.Length < 21)
+                    continue;
 
-                // Extract payload
-                byte[] payload = new byte[result.Buffer.Length - 4];
-                Array.Copy(result.Buffer, 4, payload, 0, payload.Length);
+                byte packetType = buffer[0];
+                if (packetType != 1)
+                    continue; // Not a tick packet
 
-                string message = Encoding.UTF8.GetString(payload);
-                Console.WriteLine($"← UDP [seq:{seqNum}]: {message}");
+                // Ensure consistent little-endian decoding
+                if (!BitConverter.IsLittleEndian)
+                {
+                    Array.Reverse(buffer, 1, 4);
+                    Array.Reverse(buffer, 5, 8);
+                    Array.Reverse(buffer, 13, 8);
+                }
+
+                int tickType = BitConverter.ToInt32(buffer, 1);
+                ulong tickCount = BitConverter.ToUInt64(buffer, 5);
+                long timestamp = BitConverter.ToInt64(buffer, 13);
+
+                // Guard against bad timestamps
+                if (timestamp < 0 || timestamp > DateTimeOffset.MaxValue.ToUnixTimeMilliseconds())
+                    continue;
+
+                DateTime tickTime = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime;
+
+                _tickTimes.Enqueue(timestamp);
+                Console.WriteLine($"← UDP TICK | Type:{tickType} | Count:{tickCount} | Time:{tickTime:T}");
             }
+        }
+        catch (SocketException ex)
+        {
+            Console.WriteLine($"UDP Socket closed: {ex.SocketErrorCode}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"UDP Error: {ex.Message}");
+        }
+    }
+
+    static async Task ReportTickRate()
+    {
+        while (true)
+        {
+            await Task.Delay(5000);
+            if (_tickTimes.IsEmpty) continue;
+
+            long[] ticks = [.. _tickTimes];
+            _tickTimes.Clear();
+
+            Console.WriteLine($"[Tick Summary] Received {ticks.Length} ticks in last 5s");
         }
     }
 }

@@ -80,10 +80,14 @@ public class Vessel : IDisposable
         UdpClient = sharedUdpSocket;
         UdpEndPoint = udpEndPoint;
 
-        // Initialize components once (not as properties that recreate every time)
+        // Initialize components
         TcpIO = new TcpIO(this);
-        UdpIO = new UdpIO(this);
+
+        // This constructor sets IsHandshakeComplete = true automatically
         Metrics = new Metrics(this);
+        UdpIO = new UdpIO(this, udpEndPoint);
+
+        
     }
 
     /// <summary>

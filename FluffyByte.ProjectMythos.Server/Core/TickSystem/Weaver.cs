@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+
+using FluffyByte.ProjectMythos.Server.Core.IO.Debug;
+using FluffyByte.ProjectMythos.Server.Core.IO.Networking;
 
 namespace FluffyByte.ProjectMythos.Server.Core.TickSystem;
 
@@ -15,28 +14,33 @@ namespace FluffyByte.ProjectMythos.Server.Core.TickSystem;
 /// <param name="shutdownToken">Reference to the cancellation token held by the Conductor.</param>
 public class Weaver(CancellationToken shutdownToken) : CoreProcessBase(shutdownToken)
 {
-    /// <summary>
-    /// Gets the name of the weaver.
-    /// </summary>
     public override string Name => "Weaver";
 
+    #region Default Methods from Inheritance
     /// <summary>
-    /// todo
+    /// Starts the asynchronous operation.
     /// </summary>
-    /// <returns></returns>
+    /// <remarks>This method initiates an asynchronous process. Callers should await the returned task to
+    /// ensure the operation completes before proceeding.</remarks>
     public override async Task StartAsync()
     {
         await Task.CompletedTask;
     }
 
     /// <summary>
-    /// todo
-    /// 
+    /// Stops the asynchronous operation and performs any necessary cleanup.
     /// </summary>
-    /// <returns></returns>
+    /// <remarks>This method should be called to gracefully stop the operation. It ensures that all resources
+    /// are released and any pending tasks are completed before the operation is terminated.</remarks>
+    /// <returns>A <see cref="Task"/> that represents the asynchronous stop operation.</returns>
     public override async Task StopAsync()
     {
         await Task.CompletedTask;
     }
+    #endregion
 
+    public async Task ProcessMovementTick(ulong tick)
+    {
+
+    }
 }
